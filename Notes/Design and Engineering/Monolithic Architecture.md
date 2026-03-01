@@ -1,0 +1,1 @@
+A software architecture where all components of an application are tightly integrated and deployed as a single unit. In a monolithic system, the entire application is typically developed, deployed, and scaled together, often with a single codebase and a shared database.

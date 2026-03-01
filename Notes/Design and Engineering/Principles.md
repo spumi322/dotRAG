@@ -1,0 +1,6 @@
+
+[[SOLID]]
+[[YAGNI]]
+[[KISS]]
+[[DRY]]
+
