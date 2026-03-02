@@ -22,6 +22,7 @@
 - Nullable types (`Nullable<T>`, NRTs, `?.`, `??`, `!`)
 - Records (immutability, `with`, `==` override)
 - Tuples
+- pattern matching
 
 ---
 
@@ -66,7 +67,6 @@
 - Overriding — runtime polymorphism
 - Hiding — `new` keyword
 - Upcasting & Downcasting — `as` / `is` patterns
-- Pattern matching
 
 ---
 
@@ -121,9 +121,8 @@
 **[[6.2 Routing & Controllers|Session 6.2 — Routing & Controllers]]**
 - Attribute routing, route constraints
 - Model binding & validation (`[ApiController]`, ModelState)
-- Action Filters — auth, logging, exception, caching
 - Middleware vs Filter distinction
-- `IHostedService`
+- IHostedService / BackgroundService
 
 **[[6.3 Dependency Injection|Session 6.3 — Dependency Injection]]**
 - Lifetimes: Transient / Scoped / Singleton
@@ -151,7 +150,7 @@
 ## MODULE 7 — Data Layer
 
 **[[7.1 SQL Fundamentals|Session 7.1 — SQL Fundamentals]]**
-- DDL / DML / DQL / DCL / TCL
+- DDL / DML / DQL 
 - Data types, constraints, entity relationships
 - Normalization (1NF / 2NF / 3NF)
 
@@ -159,13 +158,11 @@
 - JOINs (INNER, LEFT, RIGHT, FULL)
 - Indexes (clustered vs non-clustered)
 - Aggregate functions, GROUP BY, HAVING
-- Views, subqueries
-- Window functions: `ROW_NUMBER()`, `RANK()`, `DENSE_RANK()`, `SUM() OVER`, `PARTITION BY`
 
 **[[7.3 Transactions & Security|Session 7.3 — Transactions & Security]]**
 - ACID properties
 - BEGIN / COMMIT / ROLLBACK
-- Isolation levels (READ COMMITTED, dirty reads, phantom reads)
+- Isolation levels
 - SQL injection prevention
 - Stored Procedures, Triggers — when and why to avoid
 
@@ -181,44 +178,39 @@
 
 ## MODULE 8 — Testing
 
-**[[8.1 Unit Testing|Session 8.1 — Unit Testing]]**
-- Unit vs Integration vs E2E — scope and purpose
-- xUnit: `[Fact]`, `[Theory]`, `[InlineData]`
+**[[8 Testing|Session 8 — Testing]]**
+- Testing pyramid — Unit / Integration / E2E scope and purpose
 - AAA pattern (Arrange / Act / Assert)
 - Test naming: `MethodName_Scenario_ExpectedResult`
+- xUnit: `[Fact]`, `[Theory]`, `[InlineData]`
 - Moq: Setup, Returns, Verify
-- Integration tests
-
-**[[8.2 Integration Testing|Session 8.2 — Integration Testing]]**
-- `WebApplicationFactory<T>`
-- In-memory vs real DB for tests
+- `WebApplicationFactory<T>` — in-process integration tests
+- Test database strategy — EF In-Memory vs SQLite vs TestContainers
 
 ---
 
 ## MODULE 9 — Architecture & Infrastructure
 
-**[[9.1 Architectural Styles|Session 9.1 — Architectural Styles]]**
-- Monolith vs Microservices — tradeoffs, when NOT to use microservices
+**[[9.1 Architecture|Session 9.1 — Architecture]]**
 - Layered / N-Tier architecture
-- Clean Architecture vs Onion — key distinction
+- Clean Architecture — dependency inversion, inner/outer rings, TO2 as example
+- Monolith vs Microservices — tradeoffs, when NOT to use microservices
 - Modular Monolith — awareness
-- CQRS, MediatR, event-driven — "heard of it" level
+- CQRS — commands vs queries, separation of read/write paths
+- MediatR — handlers, pipeline behaviors
+- Event-driven architecture — awareness, producer/consumer, eventual consistency
 
-**[[9.2 Design Principles|Session 9.2 — Design Principles]]**
+[[9.2 — Design Principles & Infrastructure|Session 9.2 — Design Principles & Infrastructure]]
 - Separation of concerns
 - Loose coupling / high cohesion
 - God class anti-pattern
 - Technical debt — what it is, how to manage it
 - Anemic vs rich domain model
 - DDD awareness — Entity, Value Object, Aggregate, Ubiquitous Language
-- Business logic placement
-
-**[[9.3 Infrastructure Awareness|Session 9.3 — Infrastructure Awareness]]**
 - SQL vs NoSQL — when to choose which
-- Caching — in-memory vs distributed, cache-aside pattern
-- Message brokers — awareness only
-- Eventual consistency
-- Azure basics — App Service, Blob, SQL
+- Caching — cache-aside, in-memory vs distributed
+- Message brokers — awareness, producer/consumer, Kafka reference
+- Azure basics — App Service, SQL, Blob, Key Vault, Application Insights
 
 ---
 
