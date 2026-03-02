@@ -67,9 +67,10 @@
 - Abstract class vs Interface — when to use which
 - C# 8 default interface methods
 
-**[[Module 4 — OOP, SOLID, Patterns/4.3 C# Keywords & Polymorphism|Session 4.3 — C# Keywords & Polymorphism]]**
+**[[4.3 Csharp Keywords & Polymorphism# Keywords & Polymorphism|Session 4.3 — C# Keywords & Polymorphism]]**
 - static, abstract, virtual, override, new, sealed
 - override vs new trap
+- overloading, overriding, hiding
 
 **[[Module 4 — OOP, SOLID, Patterns/4.4 SOLID|Session 4.4 — SOLID]]**
 - SRP, OCP, LSP, ISP, DIP — all with code examples

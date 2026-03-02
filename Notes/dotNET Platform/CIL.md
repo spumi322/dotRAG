@@ -1,3 +1,0 @@
-The Common Intermediate Language is a programming language that all .NET-compatible languages like C#, Visual Basic, or F# get compiled to.
-
-The Common Intermediate Language (sometimes, for short, referred to as the Intermediate Language) is a programming language. When the source code written in .NET-compatible languages like C#, Visual Basic, or F# gets compiled, it is transformed into code written in Common Intermediate Language. When the application is started, the Common Language Runtime's JIT Compiler translates the CIL code to binary code (JIT stands for "Just-In-Time", which means that a particular piece of code will be translated from CIL to binary code just before it is executed for the first time).

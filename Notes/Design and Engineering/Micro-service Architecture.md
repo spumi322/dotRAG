@@ -1,1 +1,0 @@
-Microservices architecture breaks down an application into small, independent services, each handling a specific function. These services usually communicate with each other through simple, lightweight mechanisms like RESTful APIs or messaging queues. This approach allows each service to operate and evolve independently, improving flexibility and scalability.
