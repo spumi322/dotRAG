@@ -52,7 +52,7 @@
 
 ## MODULE 3 — OOP & C# Keywords
 
-**[[Module 3 — OOP & C# Keywords/3.1 OOP Pillars|Session 3.1 — OOP Pillars]]**
+
 - Encapsulation, Inheritance, Polymorphism, Abstraction
 - Composition over Inheritance
 
