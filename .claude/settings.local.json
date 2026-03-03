@@ -5,7 +5,18 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(sed:*)",
-      "Bash(/c/Python313/python:*)"
+      "Bash(/c/Python313/python:*)",
+      "Bash(ls:*)",
+      "WebSearch",
+      "WebFetch(domain:www.tealhq.com)",
+      "WebFetch(domain:coderpad.io)",
+      "WebFetch(domain:resumeworded.com)",
+      "WebFetch(domain:www.springboard.com)",
+      "WebFetch(domain:arc.dev)",
+      "WebFetch(domain:www.geeksforgeeks.org)",
+      "WebFetch(domain:www.interviewbit.com)",
+      "WebFetch(domain:www.frontendinterviewhandbook.com)",
+      "WebFetch(domain:www.nucamp.co)"
     ]
   }
 }
