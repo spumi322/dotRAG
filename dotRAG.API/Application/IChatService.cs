@@ -1,6 +1,8 @@
+using dotRAG.API.Models;
+
 namespace dotRAG.API.Application;
 
 public interface IChatService
 {
-    Task<string> AskAsync(string question, CancellationToken ct = default);
+    Task<string> AskAsync(ChatRequest request, CancellationToken ct = default);
 }
