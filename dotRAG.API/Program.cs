@@ -1,9 +1,11 @@
 using dotRAG.API.Application;
 using dotRAG.API.Infrastructure.Embeddings;
+using dotRAG.API.Infrastructure.Health;
 using dotRAG.API.Infrastructure.LLM;
 using dotRAG.API.Infrastructure.RAG;
 using dotRAG.API.Middleware;
 using dotRAG.API.Models;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Scalar.AspNetCore;
 using Serilog;
 
@@ -24,7 +26,8 @@ try
         .MinimumLevel.Override("Microsoft.AspNetCore", Serilog.Events.LogEventLevel.Warning)
         .ReadFrom.Configuration(ctx.Configuration)
         .ReadFrom.Services(svc)
-        .WriteTo.Console());
+        .WriteTo.Console()
+        .Enrich.FromLogContext());  // required for CorrelationId enrichment
 
     // ── OpenAPI ───────────────────────────────────────────────────────────────
     builder.Services.AddOpenApi();
@@ -36,15 +39,30 @@ try
     // ── HTTP client ───────────────────────────────────────────────────────────
     builder.Services.AddHttpClient();
 
-    // ── Infrastructure (all Singleton — stateless or shared-state) ───────────
+    // ── Health checks ─────────────────────────────────────────────────────────
+    builder.Services.AddSingleton<IngestionHealthCheck>();
+    builder.Services.AddHealthChecks().AddCheck<IngestionHealthCheck>("ingestion");
+
+    // ── CORS ──────────────────────────────────────────────────────────────────
+    builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
+        p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
+
+    // ── Middleware ────────────────────────────────────────────────────────────
+    builder.Services.AddSingleton<CorrelationIdMiddleware>();
+
+    // ── Infrastructure (all Singleton) ────────────────────────────────────────
     builder.Services.AddSingleton<InMemoryVectorStore>();
     builder.Services.AddSingleton<MarkdownChunker>();
     builder.Services.AddSingleton<IEmbeddingService, VoyageEmbeddingService>();
     builder.Services.AddSingleton<ILlmService, AnthropicLlmService>();
     builder.Services.AddSingleton<INotesSearchService, NotesSearchService>();
-    builder.Services.AddHostedService<NotesIngestionService>();
+
+    // Double-register so IngestionHealthCheck and endpoint get the same IsReady instance.
+    builder.Services.AddSingleton<NotesIngestionService>();
+    builder.Services.AddHostedService(sp => sp.GetRequiredService<NotesIngestionService>());
 
     // ── Application ───────────────────────────────────────────────────────────
+    builder.Services.AddSingleton<IQueryRewriter, QueryRewriter>();
     builder.Services.AddSingleton<IPromptBuilder, PromptBuilder>();
     builder.Services.AddSingleton<IChatService, ChatService>();
 
@@ -52,7 +70,10 @@ try
 
     // ── Middleware pipeline ───────────────────────────────────────────────────
     app.UseExceptionHandler();
+    app.UseCors();
+    app.UseMiddleware<CorrelationIdMiddleware>();
     app.UseSerilogRequestLogging();
+    app.UseStaticFiles();   // serves wwwroot/index.html
 
     if (app.Environment.IsDevelopment())
     {
@@ -60,9 +81,40 @@ try
         app.MapScalarApiReference(); // /scalar
     }
 
+    // ── Health endpoint ───────────────────────────────────────────────────────
+    app.MapHealthChecks("/health", new HealthCheckOptions
+    {
+        ResponseWriter = async (ctx, report) =>
+        {
+            ctx.Response.ContentType = "application/json";
+            await ctx.Response.WriteAsync(System.Text.Json.JsonSerializer.Serialize(new
+            {
+                status = report.Status.ToString(),
+                checks = report.Entries.Select(e => new
+                {
+                    name        = e.Key,
+                    status      = e.Value.Status.ToString(),
+                    description = e.Value.Description
+                })
+            }));
+        }
+    });
+
     // ── Endpoints ─────────────────────────────────────────────────────────────
-    app.MapPost("/api/chat", async (ChatRequest req, IChatService chat, CancellationToken ct) =>
-        Results.Ok(new ChatResponse(await chat.AskAsync(req.Question, ct))));
+    app.MapPost("/api/chat", async (
+        ChatRequest req,
+        IChatService chat,
+        NotesIngestionService ingestion,
+        CancellationToken ct) =>
+    {
+        if (!ingestion.IsReady)
+            return Results.Problem(
+                title: "Service not ready",
+                detail: "Notes ingestion is still in progress. Please retry shortly.",
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+
+        return Results.Ok(new ChatResponse(await chat.AskAsync(req, ct)));
+    });
 
     app.Run();
 }
