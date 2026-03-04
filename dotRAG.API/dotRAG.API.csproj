@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>b802a556-92f2-46dc-ba8b-ea05f3248fca</UserSecretsId>
+    <InternalsVisibleTo>dotRAG.Tests</InternalsVisibleTo>
   </PropertyGroup>
 
   <ItemGroup>
