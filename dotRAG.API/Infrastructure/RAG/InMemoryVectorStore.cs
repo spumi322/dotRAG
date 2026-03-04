@@ -8,10 +8,11 @@ internal sealed class InMemoryVectorStore
 
     public void Add(NoteChunk chunk, float[] embedding) => _store.Add((chunk, embedding));
 
-    public IReadOnlyList<NoteChunk> Search(float[] query, int topK) =>
+    public IReadOnlyList<NoteChunk> Search(float[] query, int topK, float minScore = 0f) =>
         _store.Count == 0 ? [] :
         _store
             .Select(e => (e.Chunk, Score: Cosine(query, e.Embedding)))
+            .Where(x => x.Score >= minScore)
             .OrderByDescending(x => x.Score)
             .Take(topK)
             .Select(x => x.Chunk)
