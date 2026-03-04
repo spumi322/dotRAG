@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="dotRAG.API/dotRAG.API.csproj" />
+  <Project Path="dotRAG.Tests/dotRAG.Tests.csproj" />
 </Solution>
