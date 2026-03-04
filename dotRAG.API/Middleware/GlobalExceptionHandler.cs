@@ -1,9 +1,8 @@
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Mvc;
 
 namespace dotRAG.API.Middleware;
 
-// Phase 0 placeholder — catches all unhandled exceptions, returns raw HTTP 500.
-// Phase 2: replace WriteAsync body with ProblemDetails (RFC 9457) JSON response.
 internal sealed class GlobalExceptionHandler : IExceptionHandler
 {
     private readonly ILogger<GlobalExceptionHandler> _logger;
@@ -17,9 +16,16 @@ internal sealed class GlobalExceptionHandler : IExceptionHandler
     {
         _logger.LogError(exception, "Unhandled exception caught by GlobalExceptionHandler");
 
-        httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
-        httpContext.Response.ContentType = "text/plain";
-        await httpContext.Response.WriteAsync("An unexpected error occurred.", cancellationToken);
+        var problem = new ProblemDetails
+        {
+            Status = StatusCodes.Status500InternalServerError,
+            Title  = "An unexpected error occurred.",
+            Type   = "https://tools.ietf.org/html/rfc9110#section-15.6.1"
+        };
+
+        httpContext.Response.StatusCode  = StatusCodes.Status500InternalServerError;
+        httpContext.Response.ContentType = "application/problem+json";
+        await httpContext.Response.WriteAsJsonAsync(problem, cancellationToken);
 
         return true;
     }
