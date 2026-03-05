@@ -16,7 +16,13 @@
       "WebFetch(domain:www.geeksforgeeks.org)",
       "WebFetch(domain:www.interviewbit.com)",
       "WebFetch(domain:www.frontendinterviewhandbook.com)",
-      "WebFetch(domain:www.nucamp.co)"
+      "WebFetch(domain:www.nucamp.co)",
+      "Bash(dotnet:*)",
+      "Bash(mkdir:*)",
+      "Bash(head:*)",
+      "Bash(wc:*)",
+      "Bash(cat:*)",
+      "Bash(xargs grep:*)"
     ]
   }
 }
