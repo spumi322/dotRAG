@@ -200,7 +200,7 @@
 - MediatR — handlers, pipeline behaviors
 - Event-driven architecture — awareness, producer/consumer, eventual consistency
 
-[[9.2 — Design Principles & Infrastructure|Session 9.2 — Design Principles & Infrastructure]]
+[[9.2 Design Principles & Infrastructure|Session 9.2 — Design Principles & Infrastructure]]
 - Separation of concerns
 - Loose coupling / high cohesion
 - God class anti-pattern
