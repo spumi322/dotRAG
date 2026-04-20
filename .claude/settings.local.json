@@ -23,7 +23,8 @@
       "Bash(wc:*)",
       "Bash(cat:*)",
       "Bash(xargs grep:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(grep:*)"
     ]
   }
 }
