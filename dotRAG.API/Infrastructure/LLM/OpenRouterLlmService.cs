@@ -44,6 +44,10 @@ internal sealed class OpenRouterLlmService : ILlmService
         var body = await resp.Content.ReadFromJsonAsync<OpenRouterResponse>(ct)
             ?? throw new InvalidOperationException("OpenRouter API returned null.");
 
+        if (body.Usage is { } usage)
+            _logger.LogInformation("OpenRouter response (model: {Model}): {PromptTokens} prompt tokens, {CompletionTokens} completion tokens",
+                _model, usage.PromptTokens, usage.CompletionTokens);
+
         return body.Choices[0].Message.Content;
     }
 }
@@ -57,7 +61,12 @@ internal record OpenRouterRequest(
     [property: JsonPropertyName("model")]    string Model);
 
 internal record OpenRouterResponse(
-    [property: JsonPropertyName("choices")] OpenRouterChoice[] Choices);
+    [property: JsonPropertyName("choices")] OpenRouterChoice[] Choices,
+    [property: JsonPropertyName("usage")]   OpenRouterUsage?   Usage);
+
+internal record OpenRouterUsage(
+    [property: JsonPropertyName("prompt_tokens")]     int PromptTokens,
+    [property: JsonPropertyName("completion_tokens")] int CompletionTokens);
 
 internal record OpenRouterChoice(
     [property: JsonPropertyName("message")] OpenRouterMessage Message);

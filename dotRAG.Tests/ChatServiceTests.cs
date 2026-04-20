@@ -1,5 +1,6 @@
 using dotRAG.API.Application;
 using dotRAG.API.Models;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
 namespace dotRAG.Tests;
@@ -11,7 +12,7 @@ public sealed class ChatServiceTests
     private readonly Mock<ILlmService>         _llm      = new();
     private readonly Mock<IQueryRewriter>      _rewriter = new();
 
-    private ChatService Sut() => new(_search.Object, _prompt.Object, _llm.Object, _rewriter.Object);
+    private ChatService Sut() => new(_search.Object, _prompt.Object, _llm.Object, _rewriter.Object, NullLogger<ChatService>.Instance);
 
     [Fact]
     public async Task NoHistory_RewriterNotCalled()

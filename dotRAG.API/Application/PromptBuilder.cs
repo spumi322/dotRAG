@@ -25,12 +25,21 @@ internal sealed class PromptBuilder : IPromptBuilder
         IReadOnlyList<HistoryMessage>? history = null)
     {
         var window = history is null ? null : new List<HistoryMessage>(history);
+        var originalHistoryCount = history?.Count ?? 0;
 
         while (true)
         {
             var candidate = Assemble(question, chunks, window);
-            if (EstimateTokens(candidate) <= _maxTokens)
+            var tokenEstimate = EstimateTokens(candidate);
+            if (tokenEstimate <= _maxTokens)
+            {
+                var includedCount = window?.Count ?? 0;
+                var trimmedCount = originalHistoryCount - includedCount;
+                _logger.LogInformation(
+                    "Prompt assembled: ~{Tokens} tokens, {Included} history messages included, {Trimmed} trimmed",
+                    tokenEstimate, includedCount, trimmedCount);
                 return candidate;
+            }
 
             if (window is { Count: >= 2 })
             {
@@ -41,7 +50,7 @@ internal sealed class PromptBuilder : IPromptBuilder
 
             _logger.LogWarning(
                 "Prompt exceeds token budget ({Est} tokens > {Max} max) with no history to trim. Sending anyway.",
-                EstimateTokens(candidate), _maxTokens);
+                tokenEstimate, _maxTokens);
             return candidate;
         }
     }

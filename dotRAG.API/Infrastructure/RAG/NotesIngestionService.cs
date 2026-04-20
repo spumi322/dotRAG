@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using dotRAG.API.Application;
 using dotRAG.API.Models;
 
@@ -44,6 +45,8 @@ internal sealed class NotesIngestionService : IHostedService
                 return;
             }
 
+            var sw = Stopwatch.StartNew();
+
             var files = Directory.GetFiles(notesPath, "*.md", SearchOption.AllDirectories);
             _logger.LogInformation("Ingesting {Count} note files from {Path}", files.Length, notesPath);
 
@@ -53,13 +56,16 @@ internal sealed class NotesIngestionService : IHostedService
                 var content = await File.ReadAllTextAsync(file);
                 allChunks.AddRange(_chunker.Chunk(file, content));
             }
+            _logger.LogInformation("Chunking complete: {Files} files -> {Chunks} chunks", files.Length, allChunks.Count);
 
             var texts = allChunks.Select(c => c.Content).ToArray();
             var embeddings = await _embedder.EmbedBatchAsync(texts, "document");
             for (var i = 0; i < allChunks.Count; i++)
                 _store.Add(allChunks[i], embeddings[i]);
 
-            _logger.LogInformation("Ingestion complete. {Total} chunks indexed.", allChunks.Count);
+            sw.Stop();
+            _logger.LogInformation("Ingestion complete: {Files} files, {Chunks} chunks indexed in {Elapsed}ms",
+                files.Length, allChunks.Count, sw.ElapsedMilliseconds);
         }
         catch (Exception ex)
         {
