@@ -54,7 +54,8 @@ try
     builder.Services.AddSingleton<InMemoryVectorStore>();
     builder.Services.AddSingleton<MarkdownChunker>();
     builder.Services.AddSingleton<IEmbeddingService, VoyageEmbeddingService>();
-    builder.Services.AddSingleton<ILlmService, AnthropicLlmService>();
+    // builder.Services.AddSingleton<ILlmService, AnthropicLlmService>();
+    builder.Services.AddSingleton<ILlmService, OpenRouterLlmService>();
     builder.Services.AddSingleton<INotesSearchService, NotesSearchService>();
 
     // Double-register so IngestionHealthCheck and endpoint get the same IsReady instance.
