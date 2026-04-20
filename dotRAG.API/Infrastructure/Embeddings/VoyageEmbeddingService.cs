@@ -19,24 +19,37 @@ internal sealed class VoyageEmbeddingService : IEmbeddingService
             ?? throw new InvalidOperationException("ApiKeys:VoyageApiKey not configured.");
     }
 
-    public async Task<float[]> EmbedAsync(string text, CancellationToken ct = default)
+    public async Task<float[]> EmbedAsync(string text, string? inputType = null, CancellationToken ct = default)
+    {
+        var results = await EmbedBatchAsync([text], inputType, ct);
+        return results[0];
+    }
+
+    public async Task<float[][]> EmbedBatchAsync(IReadOnlyList<string> texts, string? inputType = null, CancellationToken ct = default)
     {
         using var client = _http.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
 
-        var resp = await client.PostAsJsonAsync(Endpoint, new EmbedReq([text], Model), ct);
-        resp.EnsureSuccessStatusCode();
+        var resp = await client.PostAsJsonAsync(Endpoint, new EmbedReq(texts.ToArray(), Model, inputType), ct);
+        if (!resp.IsSuccessStatusCode)
+        {
+            var errorBody = await resp.Content.ReadAsStringAsync(ct);
+            throw new HttpRequestException(
+                $"Voyage API {(int)resp.StatusCode}: {errorBody}");
+        }
 
         var body = await resp.Content.ReadFromJsonAsync<EmbedResp>(ct)
             ?? throw new InvalidOperationException("Voyage API returned null.");
-        return body.Data[0].Embedding;
+        return body.Data.OrderBy(d => d.Index).Select(d => d.Embedding).ToArray();
     }
 
     private record EmbedReq(
-        [property: JsonPropertyName("input")] string[] Input,
-        [property: JsonPropertyName("model")] string   Model);
+        [property: JsonPropertyName("input")]      string[] Input,
+        [property: JsonPropertyName("model")]      string   Model,
+        [property: JsonPropertyName("input_type")] string?  InputType);
     private record EmbedResp(
         [property: JsonPropertyName("data")]  EmbedData[] Data);
     private record EmbedData(
+        [property: JsonPropertyName("index")]     int Index,
         [property: JsonPropertyName("embedding")] float[] Embedding);
 }

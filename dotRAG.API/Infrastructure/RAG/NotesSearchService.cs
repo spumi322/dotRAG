@@ -20,7 +20,7 @@ internal sealed class NotesSearchService : INotesSearchService
 
     public async Task<IReadOnlyList<NoteChunk>> SearchAsync(string question, CancellationToken ct = default)
     {
-        var embedding = await _embedder.EmbedAsync(question, ct);
+        var embedding = await _embedder.EmbedAsync(question, "query", ct);
         return _store.Search(embedding, _topK, _minScore);
     }
 }

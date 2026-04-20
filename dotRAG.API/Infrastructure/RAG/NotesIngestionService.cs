@@ -1,4 +1,5 @@
 using dotRAG.API.Application;
+using dotRAG.API.Models;
 
 namespace dotRAG.API.Infrastructure.RAG;
 
@@ -46,19 +47,19 @@ internal sealed class NotesIngestionService : IHostedService
             var files = Directory.GetFiles(notesPath, "*.md", SearchOption.AllDirectories);
             _logger.LogInformation("Ingesting {Count} note files from {Path}", files.Length, notesPath);
 
-            var total = 0;
+            var allChunks = new List<NoteChunk>();
             foreach (var file in files)
             {
                 var content = await File.ReadAllTextAsync(file);
-                var chunks  = _chunker.Chunk(file, content);
-                foreach (var chunk in chunks)
-                {
-                    var embedding = await _embedder.EmbedAsync(chunk.Content);
-                    _store.Add(chunk, embedding);
-                    total++;
-                }
+                allChunks.AddRange(_chunker.Chunk(file, content));
             }
-            _logger.LogInformation("Ingestion complete. {Total} chunks indexed.", total);
+
+            var texts = allChunks.Select(c => c.Content).ToArray();
+            var embeddings = await _embedder.EmbedBatchAsync(texts, "document");
+            for (var i = 0; i < allChunks.Count; i++)
+                _store.Add(allChunks[i], embeddings[i]);
+
+            _logger.LogInformation("Ingestion complete. {Total} chunks indexed.", allChunks.Count);
         }
         catch (Exception ex)
         {

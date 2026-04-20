@@ -74,7 +74,8 @@ try
     app.UseCors();
     app.UseMiddleware<CorrelationIdMiddleware>();
     app.UseSerilogRequestLogging();
-    app.UseStaticFiles();   // serves wwwroot/index.html
+    app.UseDefaultFiles();  // maps / → /index.html
+    app.UseStaticFiles();
 
     if (app.Environment.IsDevelopment())
     {
