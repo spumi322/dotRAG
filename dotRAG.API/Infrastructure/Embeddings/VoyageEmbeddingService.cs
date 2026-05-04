@@ -7,8 +7,10 @@ namespace dotRAG.API.Infrastructure.Embeddings;
 
 internal sealed class VoyageEmbeddingService : IEmbeddingService
 {
-    private const string Endpoint = "https://api.voyageai.com/v1/embeddings";
-    private const string Model    = "voyage-3-large";
+    private const string Endpoint  = "https://api.voyageai.com/v1/embeddings";
+    private const string ModelName = "voyage-3-large";
+
+    public string Model => ModelName;
 
     private readonly IHttpClientFactory _http;
     private readonly string _apiKey;
@@ -34,7 +36,7 @@ internal sealed class VoyageEmbeddingService : IEmbeddingService
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
 
         var sw = Stopwatch.StartNew();
-        var resp = await client.PostAsJsonAsync(Endpoint, new EmbedReq(texts.ToArray(), Model, inputType), ct);
+        var resp = await client.PostAsJsonAsync(Endpoint, new EmbedReq(texts.ToArray(), ModelName, inputType), ct);
         if (!resp.IsSuccessStatusCode)
         {
             var errorBody = await resp.Content.ReadAsStringAsync(ct);

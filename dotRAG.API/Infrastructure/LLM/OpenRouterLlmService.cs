@@ -38,7 +38,10 @@ internal sealed class OpenRouterLlmService : ILlmService
         {
             var errorBody = await resp.Content.ReadAsStringAsync(ct);
             _logger.LogError("OpenRouter API error {StatusCode}: {Body}", (int)resp.StatusCode, errorBody);
-            resp.EnsureSuccessStatusCode();
+            throw new HttpRequestException(
+                $"OpenRouter API {(int)resp.StatusCode}: {errorBody}",
+                null,
+                resp.StatusCode);
         }
 
         var body = await resp.Content.ReadFromJsonAsync<OpenRouterResponse>(ct)

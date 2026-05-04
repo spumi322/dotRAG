@@ -53,6 +53,7 @@ try
     // ── Infrastructure (all Singleton) ────────────────────────────────────────
     builder.Services.AddSingleton<InMemoryVectorStore>();
     builder.Services.AddSingleton<MarkdownChunker>();
+    builder.Services.AddSingleton<EmbeddingCache>();
     builder.Services.AddSingleton<IEmbeddingService, VoyageEmbeddingService>();
     // builder.Services.AddSingleton<ILlmService, AnthropicLlmService>();
     builder.Services.AddSingleton<ILlmService, OpenRouterLlmService>();

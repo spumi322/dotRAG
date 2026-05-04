@@ -9,6 +9,7 @@ internal sealed class NotesIngestionService : IHostedService
     private readonly IEmbeddingService   _embedder;
     private readonly InMemoryVectorStore _store;
     private readonly MarkdownChunker     _chunker;
+    private readonly EmbeddingCache      _cache;
     private readonly IConfiguration      _config;
     private readonly IWebHostEnvironment _env;
     private readonly ILogger<NotesIngestionService> _logger;
@@ -17,11 +18,11 @@ internal sealed class NotesIngestionService : IHostedService
 
     public NotesIngestionService(
         IEmbeddingService embedder, InMemoryVectorStore store, MarkdownChunker chunker,
-        IConfiguration config, IWebHostEnvironment env,
+        EmbeddingCache cache, IConfiguration config, IWebHostEnvironment env,
         ILogger<NotesIngestionService> logger)
     {
-        (_embedder, _store, _chunker, _config, _env, _logger)
-            = (embedder, store, chunker, config, env, logger);
+        (_embedder, _store, _chunker, _cache, _config, _env, _logger)
+            = (embedder, store, chunker, cache, config, env, logger);
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
@@ -47,7 +48,8 @@ internal sealed class NotesIngestionService : IHostedService
 
             var sw = Stopwatch.StartNew();
 
-            var files = Directory.GetFiles(notesPath, "*.md", SearchOption.AllDirectories);
+            var files = Directory.GetFiles(notesPath, "*.md", SearchOption.AllDirectories)
+                .OrderBy(f => f).ToArray();
             _logger.LogInformation("Ingesting {Count} note files from {Path}", files.Length, notesPath);
 
             var allChunks = new List<NoteChunk>();
@@ -58,8 +60,25 @@ internal sealed class NotesIngestionService : IHostedService
             }
             _logger.LogInformation("Chunking complete: {Files} files -> {Chunks} chunks", files.Length, allChunks.Count);
 
-            var texts = allChunks.Select(c => c.Content).ToArray();
-            var embeddings = await _embedder.EmbedBatchAsync(texts, "document");
+            var hash = _cache.ComputeHash(allChunks, _embedder.Model);
+            var embeddings = _cache.TryLoad(hash);
+
+            if (embeddings is null || embeddings.Length != allChunks.Count)
+            {
+                if (embeddings is not null)
+                    _logger.LogWarning("[Cache] Embedding count mismatch (cached={Cached}, chunks={Chunks})",
+                        embeddings.Length, allChunks.Count);
+
+                var texts = allChunks.Select(c => c.Content).ToArray();
+                embeddings = await _embedder.EmbedBatchAsync(texts, "document");
+                _cache.Save(hash, embeddings);
+            }
+            else
+            {
+                _logger.LogInformation("[Cache] Loaded {Count} embeddings from cache (hash: {Hash})",
+                    embeddings.Length, hash[..12]);
+            }
+
             for (var i = 0; i < allChunks.Count; i++)
                 _store.Add(allChunks[i], embeddings[i]);
 
@@ -73,7 +92,7 @@ internal sealed class NotesIngestionService : IHostedService
         }
         finally
         {
-            IsReady = true; // always mark ready (even on failure) so health check doesn't stall
+            IsReady = true;
         }
     }
 }
