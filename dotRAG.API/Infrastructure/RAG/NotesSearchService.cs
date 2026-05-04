@@ -22,21 +22,28 @@ internal sealed class NotesSearchService : INotesSearchService
 
     public async Task<IReadOnlyList<NoteChunk>> SearchAsync(string question, CancellationToken ct = default)
     {
-        _logger.LogInformation("Searching notes for: {Query}", question);
-
         var embedding = await _embedder.EmbedAsync(question, "query", ct);
-        var chunks = _store.Search(embedding, _topK, _minScore);
+        var scored = _store.Search(embedding, _topK, _minScore);
 
-        if (chunks.Count == 0)
+        if (scored.Count == 0)
         {
-            _logger.LogWarning("No chunks found above minimum score {MinScore} for query: {Query}", _minScore, question);
+            var best = _store.Search(embedding, 1, minScore: 0f);
+            var bestScore = best.Count > 0 ? best[0].Score : 0f;
+            _logger.LogWarning(
+                "[Retrieval] No chunks above MinScore {MinScore} (best was {BestScore:F3}, searched {Total} chunks)",
+                _minScore, bestScore, _store.Count);
         }
         else
         {
-            foreach (var c in chunks)
-                _logger.LogInformation("  Matched chunk: {Source} — {Heading}", c.SourceFile, c.Heading);
+            for (var i = 0; i < scored.Count; i++)
+            {
+                var (chunk, score) = scored[i];
+                _logger.LogInformation(
+                    "[Retrieval] #{Rank}  score={Score:F3}  {Source} — {Heading}  ({Chars} chars)",
+                    i + 1, score, chunk.SourceFile, chunk.Heading, chunk.Content.Length);
+            }
         }
 
-        return chunks;
+        return scored.Select(s => s.Chunk).ToList();
     }
 }

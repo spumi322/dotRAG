@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using dotRAG.API.Models;
 
 namespace dotRAG.API.Application;
@@ -24,19 +25,25 @@ internal sealed class ChatService : IChatService
 
         if (request.History is { Count: > 0 })
         {
-            _logger.LogInformation("[QueryRewrite] Rewriting follow-up question with {HistoryCount} history messages", request.History.Count);
+            _logger.LogInformation("[QueryRewrite] Rewriting follow-up with {HistoryCount} history messages", request.History.Count);
             searchQuery = await _rewriter.RewriteAsync(request.History, request.Question, ct);
-            _logger.LogInformation("[QueryRewrite] Rewritten query: {Query}", searchQuery);
+            _logger.LogInformation("[QueryRewrite] Result: {Query}", searchQuery);
         }
 
         _logger.LogInformation("[Retrieval] Searching for: {Query}", searchQuery);
         var chunks = await _search.SearchAsync(searchQuery, ct);
-        _logger.LogInformation("[Retrieval] {ChunkCount} chunks retrieved", chunks.Count);
 
-        _logger.LogInformation("[PromptBuild] Building prompt with {ChunkCount} chunks", chunks.Count);
         var prompt = _prompt.Build(request.Question, chunks, request.History);
+        _logger.LogInformation("[PromptBuild] {Chars} chars (~{Tokens} tokens), {ChunkCount} chunks",
+            prompt.Length, prompt.Length / 4, chunks.Count);
 
         _logger.LogInformation("[LlmCall] Sending prompt to LLM");
-        return await _llm.CompleteAsync(prompt, ct);
+        var sw = Stopwatch.StartNew();
+        var response = await _llm.CompleteAsync(prompt, ct);
+        sw.Stop();
+        _logger.LogInformation("[LlmCall] Response received in {Elapsed}ms ({ResponseChars} chars)",
+            sw.ElapsedMilliseconds, response.Length);
+
+        return response;
     }
 }

@@ -24,7 +24,12 @@
       "Bash(cat:*)",
       "Bash(xargs grep:*)",
       "Bash(find:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(Get-ChildItem \"G:\\\\Code\\\\dotRAG\\\\Notes\" -Recurse -Filter \"*.md\")",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Sort-Object)",
+      "Bash(Get-ChildItem -Path \"Notes\" -Filter \"*.md\" -Recurse)",
+      "Bash(powershell *)"
     ]
   }
 }
