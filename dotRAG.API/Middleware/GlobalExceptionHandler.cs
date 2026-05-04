@@ -16,8 +16,16 @@ internal sealed class GlobalExceptionHandler : IExceptionHandler
     {
         _logger.LogError(exception, "Unhandled exception caught by GlobalExceptionHandler");
 
+        if (exception is OperationCanceledException && cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogDebug("Request cancelled by client");
+            return true;
+        }
+
         var (status, title) = exception switch
         {
+            TaskCanceledException =>
+                (StatusCodes.Status504GatewayTimeout, "Upstream API timed out."),
             HttpRequestException { StatusCode: { } code } =>
                 ((int)code, $"Upstream API error: {exception.Message}"),
             _ =>

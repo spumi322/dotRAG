@@ -33,6 +33,7 @@ internal sealed class VoyageEmbeddingService : IEmbeddingService
     public async Task<float[][]> EmbedBatchAsync(IReadOnlyList<string> texts, string? inputType = null, CancellationToken ct = default)
     {
         using var client = _http.CreateClient();
+        client.Timeout = TimeSpan.FromSeconds(30);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
 
         var sw = Stopwatch.StartNew();

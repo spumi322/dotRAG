@@ -26,6 +26,7 @@ internal sealed class OpenRouterLlmService : ILlmService
     public async Task<string> CompleteAsync(string prompt, CancellationToken ct = default)
     {
         using var client = _http.CreateClient();
+        client.Timeout = TimeSpan.FromSeconds(60);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
 
         var request = new OpenRouterRequest([new OpenRouterMessage("user", prompt)], _model);
