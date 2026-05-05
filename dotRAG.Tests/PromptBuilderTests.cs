@@ -22,9 +22,11 @@ public sealed class PromptBuilderTests
     public void NoHistory_ContainsQuestionAndNotes_NoHistorySection()
     {
         var result = Make().Build("What is the stack?", OneChunk);
-        Assert.Contains("Stack vs Heap", result);
-        Assert.Contains("What is the stack?", result);
-        Assert.DoesNotContain("Conversation History", result);
+        Assert.Contains("Stack vs Heap", result.Prompt);
+        Assert.Contains("What is the stack?", result.Prompt);
+        Assert.DoesNotContain("Conversation History", result.Prompt);
+        Assert.Equal(0, result.HistoryIncluded);
+        Assert.Equal(0, result.HistoryTrimmed);
     }
 
     [Fact]
@@ -32,8 +34,10 @@ public sealed class PromptBuilderTests
     {
         var history = new List<HistoryMessage> { new("user", "Prior Q"), new("assistant", "Prior A") };
         var result  = Make().Build("Follow-up?", OneChunk, history);
-        Assert.Contains("Conversation History", result);
-        Assert.Contains("Prior Q", result);
+        Assert.Contains("Conversation History", result.Prompt);
+        Assert.Contains("Prior Q", result.Prompt);
+        Assert.Equal(2, result.HistoryIncluded);
+        Assert.Equal(0, result.HistoryTrimmed);
     }
 
     [Fact]
@@ -48,14 +52,16 @@ public sealed class PromptBuilderTests
             new("assistant", "Short")
         };
         var result = Make(maxTokens: 50).Build("Final?", OneChunk, history);
-        Assert.NotNull(result);
-        Assert.Contains("Final?", result);
+        Assert.NotNull(result.Prompt);
+        Assert.Contains("Final?", result.Prompt);
+        Assert.True(result.HistoryTrimmed > 0);
     }
 
     [Fact]
     public void EmptyHistory_BehavesLikeNoHistory()
     {
         var result = Make().Build("Q?", OneChunk, []);
-        Assert.DoesNotContain("Conversation History", result);
+        Assert.DoesNotContain("Conversation History", result.Prompt);
+        Assert.Equal(0, result.HistoryIncluded);
     }
 }

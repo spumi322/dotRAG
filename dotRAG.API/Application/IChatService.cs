@@ -4,5 +4,7 @@ namespace dotRAG.API.Application;
 
 public interface IChatService
 {
-    Task<string> AskAsync(ChatRequest request, CancellationToken ct = default);
+    Task<ChatResult> AskAsync(ChatRequest request, CancellationToken ct = default);
 }
+
+public sealed record ChatResult(string Answer, IReadOnlyList<ChunkDto> Chunks);

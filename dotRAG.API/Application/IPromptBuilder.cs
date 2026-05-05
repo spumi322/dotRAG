@@ -4,8 +4,14 @@ namespace dotRAG.API.Application;
 
 public interface IPromptBuilder
 {
-    string Build(
+    PromptBuildResult Build(
         string question,
         IReadOnlyList<NoteChunk> chunks,
         IReadOnlyList<HistoryMessage>? history = null);
 }
+
+public sealed record PromptBuildResult(
+    string Prompt,
+    int EstimatedTokens,
+    int HistoryIncluded,
+    int HistoryTrimmed);

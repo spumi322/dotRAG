@@ -1,6 +1,12 @@
-<div class="layout">
+<div class="layout" [class.has-right]="hasRight()">
   <app-sidebar />
   <main class="main">
     <router-outlet />
   </main>
+  @if (rightTemplate(); as tpl) {
+    <aside class="right-panel">
+      <ng-container [ngTemplateOutlet]="tpl" />
+    </aside>
+  }
 </div>
+<app-toast-host />

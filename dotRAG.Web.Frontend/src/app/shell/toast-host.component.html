@@ -1,0 +1,11 @@
+<div class="stack" role="status" aria-live="polite">
+  @for (t of toasts.toasts(); track t.id) {
+    <button
+      type="button"
+      class="toast"
+      [class]="'toast--' + t.kind"
+      (click)="toasts.dismiss(t.id)">
+      {{ t.message }}
+    </button>
+  }
+</div>

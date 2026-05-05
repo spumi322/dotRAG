@@ -10,6 +10,10 @@ internal sealed class InMemoryVectorStore
 
     public int Count => _store.Count;
 
+    public int FileCount => _store.Count == 0
+        ? 0
+        : _store.Select(e => e.Chunk.SourceFile).Distinct().Count();
+
     public IReadOnlyList<(NoteChunk Chunk, float Score)> Search(float[] query, int topK, float minScore = 0f) =>
         _store.Count == 0 ? [] :
         _store

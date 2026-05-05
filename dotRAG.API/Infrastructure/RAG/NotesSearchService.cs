@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using dotRAG.API.Application;
 using dotRAG.API.Models;
 
@@ -20,10 +21,15 @@ internal sealed class NotesSearchService : INotesSearchService
         _logger   = logger;
     }
 
-    public async Task<IReadOnlyList<NoteChunk>> SearchAsync(string question, CancellationToken ct = default)
+    public async Task<NotesSearchResult> SearchAsync(string question, CancellationToken ct = default)
     {
+        var embedSw = Stopwatch.StartNew();
         var embedding = await _embedder.EmbedAsync(question, "query", ct);
+        embedSw.Stop();
+
+        var searchSw = Stopwatch.StartNew();
         var scored = _store.Search(embedding, _topK, _minScore);
+        searchSw.Stop();
 
         if (scored.Count == 0)
         {
@@ -44,6 +50,10 @@ internal sealed class NotesSearchService : INotesSearchService
             }
         }
 
-        return scored.Select(s => s.Chunk).ToList();
+        return new NotesSearchResult(
+            Chunks:        scored.Select(s => new ScoredChunk(s.Chunk, s.Score)).ToList(),
+            EmbedMs:       embedSw.ElapsedMilliseconds,
+            SearchMs:      searchSw.ElapsedMilliseconds,
+            EmbeddingDim:  embedding.Length);
     }
 }

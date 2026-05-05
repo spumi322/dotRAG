@@ -9,10 +9,21 @@
   display: grid;
   grid-template-columns: 220px 1fr;
   height: 100%;
+
+  &.has-right {
+    grid-template-columns: 220px 1fr 320px;
+  }
 }
 
 .main {
   background: t.$bg-base;
+  overflow: auto;
+  padding: 16px;
+}
+
+.right-panel {
+  background: t.$surface;
+  border-left: t.$border;
   overflow: auto;
   padding: 16px;
 }

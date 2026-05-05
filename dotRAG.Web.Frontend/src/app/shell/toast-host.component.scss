@@ -1,0 +1,38 @@
+@use 'tokens' as t;
+
+:host {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.toast {
+  pointer-events: auto;
+  max-width: 360px;
+  padding: 10px 14px;
+  border-radius: t.$radius;
+  background: t.$surface-raised;
+  border: t.$border;
+  color: t.$text-primary;
+  font-size: t.$fs-12;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  transition: opacity 120ms ease, transform 120ms ease;
+
+  &:hover { opacity: 0.85; }
+
+  &--error   { border-color: t.$error; color: #e7a59b; }
+  &--success { border-color: t.$border-color-active; color: t.$accent-mono; }
+  &--info    { border-color: t.$border-color-active; }
+}

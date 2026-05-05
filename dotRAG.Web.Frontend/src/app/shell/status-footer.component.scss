@@ -24,6 +24,11 @@
   border-radius: 50%;
   background: t.$accent;
   box-shadow: 0 0 6px rgba(76, 175, 110, 0.5);
+
+  &.is-warming {
+    background: t.$text-dim;
+    box-shadow: none;
+  }
 }
 
 .label {

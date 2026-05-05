@@ -39,6 +39,9 @@ try
     // ── HTTP client ───────────────────────────────────────────────────────────
     builder.Services.AddHttpClient();
 
+    // ── HttpContext access for correlation-id propagation into singletons ─────
+    builder.Services.AddHttpContextAccessor();
+
     // ── Health checks ─────────────────────────────────────────────────────────
     builder.Services.AddSingleton<IngestionHealthCheck>();
     builder.Services.AddHealthChecks().AddCheck<IngestionHealthCheck>("ingestion");
@@ -66,6 +69,7 @@ try
     // ── Application ───────────────────────────────────────────────────────────
     builder.Services.AddSingleton<IQueryRewriter, QueryRewriter>();
     builder.Services.AddSingleton<IPromptBuilder, PromptBuilder>();
+    builder.Services.AddSingleton<PipelineTraceStore>();
     builder.Services.AddSingleton<IChatService, ChatService>();
 
     var app = builder.Build();
@@ -97,7 +101,8 @@ try
                 {
                     name        = e.Key,
                     status      = e.Value.Status.ToString(),
-                    description = e.Value.Description
+                    description = e.Value.Description,
+                    data        = e.Value.Data
                 })
             }));
         }
@@ -116,8 +121,22 @@ try
                 detail: "Notes ingestion is still in progress. Please retry shortly.",
                 statusCode: StatusCodes.Status503ServiceUnavailable);
 
-        return Results.Ok(new ChatResponse(await chat.AskAsync(req, ct)));
+        var result = await chat.AskAsync(req, ct);
+        return Results.Ok(new ChatResponse(result.Answer, result.Chunks));
     });
+
+    // ── Debug endpoints (in-memory pipeline traces) ───────────────────────────
+    app.MapGet("/api/debug/recent", (PipelineTraceStore store) =>
+        store.Recent().Select(t => new
+        {
+            correlationId = t.CorrelationId,
+            timestamp     = t.Timestamp,
+            question      = t.Question,
+            totalMs       = t.TotalMs,
+        }));
+
+    app.MapGet("/api/debug/query/{id}", (string id, PipelineTraceStore store) =>
+        store.Get(id) is { } trace ? Results.Ok(trace) : Results.NotFound());
 
     // ── SPA fallback ──────────────────────────────────────────────────────────
     // Angular handles client-side routing; deep links must serve index.html.

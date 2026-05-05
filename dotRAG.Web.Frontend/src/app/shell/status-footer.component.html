@@ -1,7 +1,7 @@
 <div class="status">
   <div class="line">
-    <span class="dot"></span>
-    <span class="label">Ingestion ready</span>
+    <span class="dot" [class.is-warming]="!ready()"></span>
+    <span class="label">{{ label() }}</span>
   </div>
-  <div class="meta">— chunks · — files</div>
+  <div class="meta">{{ meta() }}</div>
 </div>

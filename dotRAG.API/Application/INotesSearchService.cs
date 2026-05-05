@@ -4,5 +4,11 @@ namespace dotRAG.API.Application;
 
 public interface INotesSearchService
 {
-    Task<IReadOnlyList<NoteChunk>> SearchAsync(string question, CancellationToken ct = default);
+    Task<NotesSearchResult> SearchAsync(string question, CancellationToken ct = default);
 }
+
+public sealed record NotesSearchResult(
+    IReadOnlyList<ScoredChunk> Chunks,
+    long EmbedMs,
+    long SearchMs,
+    int EmbeddingDim);
