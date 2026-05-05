@@ -1,0 +1,19 @@
+<aside class="sidebar">
+  <div class="brand">
+    <div class="logo">dotRAG</div>
+    <div class="subtitle">.NET study assistant</div>
+  </div>
+
+  <nav class="nav">
+    @for (item of nav; track item.path) {
+      <a
+        class="nav-item"
+        [routerLink]="item.path"
+        routerLinkActive="is-active">
+        {{ item.label }}
+      </a>
+    }
+  </nav>
+
+  <app-status-footer />
+</aside>

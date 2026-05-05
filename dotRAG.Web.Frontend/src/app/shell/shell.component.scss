@@ -1,0 +1,18 @@
+@use 'tokens' as t;
+
+:host {
+  display: block;
+  height: 100dvh;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  height: 100%;
+}
+
+.main {
+  background: t.$bg-base;
+  overflow: auto;
+  padding: 16px;
+}

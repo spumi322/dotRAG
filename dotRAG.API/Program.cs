@@ -119,6 +119,10 @@ try
         return Results.Ok(new ChatResponse(await chat.AskAsync(req, ct)));
     });
 
+    // ── SPA fallback ──────────────────────────────────────────────────────────
+    // Angular handles client-side routing; deep links must serve index.html.
+    app.MapFallbackToFile("index.html");
+
     app.Run();
 }
 catch (Exception ex) when (ex is not HostAbortedException)

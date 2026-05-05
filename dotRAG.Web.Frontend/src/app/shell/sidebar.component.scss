@@ -1,0 +1,66 @@
+@use 'tokens' as t;
+
+:host {
+  display: block;
+  height: 100%;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: t.$surface;
+  border-right: t.$border;
+  padding: 16px 12px;
+}
+
+.brand {
+  padding: 4px 8px 16px;
+}
+
+.logo {
+  color: t.$accent;
+  font-size: t.$fs-18;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.subtitle {
+  margin-top: 2px;
+  color: t.$text-dim;
+  font-size: t.$fs-11;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.nav-item {
+  display: block;
+  padding: 8px 10px;
+  border: 1.5px solid transparent;
+  border-radius: t.$radius;
+  background: transparent;
+  color: t.$text-primary;
+  font-size: t.$fs-13;
+  cursor: pointer;
+  transition: background-color 100ms ease, color 100ms ease, border-color 100ms ease;
+
+  &:hover {
+    background: t.$surface-raised;
+  }
+
+  &.is-active {
+    background: t.$accent-bg;
+    color: t.$accent;
+    border-color: t.$border-color-active;
+    font-weight: 700;
+  }
+}
+
+app-status-footer {
+  margin-top: auto;
+}

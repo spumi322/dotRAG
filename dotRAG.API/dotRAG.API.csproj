@@ -18,4 +18,22 @@
     <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
   </ItemGroup>
 
+  <!-- Angular SPA build (publish only) -->
+  <PropertyGroup>
+    <SpaRoot>..\dotRAG.Web.Frontend\</SpaRoot>
+    <SpaProjFile>$(SpaRoot)package.json</SpaProjFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Remove="$(SpaRoot)**" />
+    <None Remove="$(SpaRoot)**" />
+  </ItemGroup>
+
+  <Target Name="BuildSpa" BeforeTargets="ComputeFilesToPublish" Condition="Exists('$(SpaProjFile)')">
+    <Message Importance="high" Text="Restoring Angular dependencies..." />
+    <Exec WorkingDirectory="$(SpaRoot)" Command="npm ci" />
+    <Message Importance="high" Text="Building Angular bundle to wwwroot..." />
+    <Exec WorkingDirectory="$(SpaRoot)" Command="npm run build" />
+  </Target>
+
 </Project>

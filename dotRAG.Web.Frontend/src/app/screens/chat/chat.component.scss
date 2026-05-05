@@ -1,0 +1,7 @@
+@use 'tokens' as t;
+
+h1 {
+  color: t.$text-primary;
+  font-size: t.$fs-18;
+  font-weight: 700;
+}

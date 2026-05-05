@@ -1,0 +1,40 @@
+// Design tokens — single source of truth for the dotRAG UI.
+// Components consume via `@use 'tokens' as t;`.
+
+// Surfaces
+$bg-base:        #0a0f0b;
+$surface:        #141a15;
+$surface-raised: #1c2520;
+$surface-active: #223028;
+
+// Borders
+$border-color:        #2a3d2e;
+$border-color-active: #3d6644;
+$border:              1.5px solid $border-color;
+$border-active:       1.5px solid $border-color-active;
+
+// Text
+$text-primary:   #d4e8d0;
+$text-secondary: #7a9e80;
+$text-dim:       #4a6650;
+
+// Accent
+$accent:      #4caf6e;
+$accent-bg:   #1e3b26;
+$accent-mono: #6abf82;
+$error:       #c0392b;
+
+// Shape
+$radius: 4px;
+
+// Typography
+$font-ui:   'Helvetica Neue', Helvetica, Arial, sans-serif;
+$font-mono: 'JetBrains Mono', monospace;
+
+// Type scale
+$fs-10: 10px;
+$fs-11: 11px;
+$fs-12: 12px;
+$fs-13: 13px;
+$fs-14: 14px;
+$fs-18: 18px;

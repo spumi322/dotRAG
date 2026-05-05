@@ -1,0 +1,38 @@
+@use 'tokens' as t;
+
+:host {
+  display: block;
+  padding: 12px 8px 4px;
+  border-top: t.$border;
+}
+
+.status {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: t.$accent;
+  box-shadow: 0 0 6px rgba(76, 175, 110, 0.5);
+}
+
+.label {
+  color: t.$text-secondary;
+  font-size: t.$fs-12;
+}
+
+.meta {
+  margin-left: 16px;
+  color: t.$text-dim;
+  font-size: t.$fs-11;
+}
