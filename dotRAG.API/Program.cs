@@ -155,6 +155,120 @@ try
     app.MapGet("/api/debug/query/{id}", (string id, PipelineTraceStore store) =>
         store.Get(id) is { } trace ? Results.Ok(trace) : Results.NotFound());
 
+    // ── Notes browser endpoints ───────────────────────────────────────────────
+    // Power the Notes screen: list the indexed corpus + inspect chunk breakdown
+    // and cached embedding metadata for a given file. All gated by IsReady so
+    // callers see a 503 (handled by the readiness interceptor) until ingestion
+    // finishes.
+    string ResolveNotesPath(IConfiguration cfg, IWebHostEnvironment env) =>
+        Path.GetFullPath(Path.Combine(env.ContentRootPath, cfg["NotesPath"] ?? "../Notes"));
+
+    string ResolveCachePath(IConfiguration cfg, IWebHostEnvironment env) =>
+        Path.GetFullPath(Path.Combine(env.ContentRootPath, cfg["CachePath"] ?? "../cache/embeddings.json"));
+
+    app.MapGet("/api/notes/files", (
+        InMemoryVectorStore store,
+        NotesIngestionService ingestion,
+        IConfiguration cfg,
+        IWebHostEnvironment env) =>
+    {
+        if (!ingestion.IsReady)
+            return Results.Problem(
+                title: "Service not ready",
+                detail: "Notes ingestion is still in progress. Please retry shortly.",
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+
+        var notesPath = ResolveNotesPath(cfg, env);
+        if (!Directory.Exists(notesPath))
+            return Results.Ok(new NotesIndexDto(0, 0, []));
+
+        var chunks = store.AllChunks();
+        // SourceFile on a NoteChunk is the file name without extension. Group
+        // once so each file lookup is O(1) when we walk the filesystem.
+        var chunksByName = chunks
+            .GroupBy(c => c.SourceFile)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        var files = Directory.GetFiles(notesPath, "*.md", SearchOption.AllDirectories)
+            .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        var modules = new Dictionary<string, List<NotesFileSummaryDto>>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var file in files)
+        {
+            var rel = Path.GetRelativePath(notesPath, file).Replace('\\', '/');
+            var fileName = Path.GetFileName(rel);
+            var nameNoExt = Path.GetFileNameWithoutExtension(rel);
+            var dir = Path.GetDirectoryName(rel)?.Replace('\\', '/') ?? "";
+            // Files at the vault root → empty-name module bucket. The UI can
+            // render that as "ungrouped".
+            var moduleName = dir.Split('/', 2)[0];
+
+            var fileChunks = chunksByName.TryGetValue(nameNoExt, out var list) ? list : [];
+            var headings = fileChunks.Select(c => c.Heading).ToList();
+
+            if (!modules.TryGetValue(moduleName, out var bucket))
+            {
+                bucket = [];
+                modules[moduleName] = bucket;
+            }
+            bucket.Add(new NotesFileSummaryDto(rel, fileName, fileChunks.Count, headings));
+        }
+
+        var moduleDtos = modules
+            .OrderBy(m => m.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(m => new NotesModuleDto(m.Key, m.Value))
+            .ToList();
+
+        return Results.Ok(new NotesIndexDto(files.Length, chunks.Count, moduleDtos));
+    });
+
+    app.MapGet("/api/notes/files/{*relativePath}", (
+        string relativePath,
+        InMemoryVectorStore store,
+        NotesIngestionService ingestion,
+        IEmbeddingService embedder,
+        IConfiguration cfg,
+        IWebHostEnvironment env) =>
+    {
+        if (!ingestion.IsReady)
+            return Results.Problem(
+                title: "Service not ready",
+                detail: "Notes ingestion is still in progress. Please retry shortly.",
+                statusCode: StatusCodes.Status503ServiceUnavailable);
+
+        var notesPath = ResolveNotesPath(cfg, env);
+        var rel = Uri.UnescapeDataString(relativePath).Replace('\\', '/').TrimStart('/');
+        var absolute = Path.GetFullPath(Path.Combine(notesPath, rel));
+
+        // Reject path traversal: the resolved path must stay under notesPath.
+        var notesPathTrailing = notesPath.EndsWith(Path.DirectorySeparatorChar)
+            ? notesPath : notesPath + Path.DirectorySeparatorChar;
+        if (!absolute.StartsWith(notesPathTrailing, StringComparison.OrdinalIgnoreCase) || !File.Exists(absolute))
+            return Results.NotFound();
+
+        var fileName = Path.GetFileName(rel);
+        var nameNoExt = Path.GetFileNameWithoutExtension(rel);
+        var dir = Path.GetDirectoryName(rel)?.Replace('\\', '/') ?? "";
+        var module = dir.Split('/', 2)[0];
+
+        var chunks = store.AllChunks()
+            .Where(c => c.SourceFile == nameNoExt)
+            .Select((c, i) => new NoteChunkDto(i, c.Heading, c.Content))
+            .ToList();
+
+        var embedding = new EmbeddingMetadataDto(
+            embedder.Model,
+            store.EmbeddingDimension,
+            ResolveCachePath(cfg, env));
+
+        return Results.Ok(new NotesFileDetailDto(rel, fileName, module, chunks, embedding));
+    });
+
+    app.MapPost("/api/notes/reindex", () =>
+        Results.Accepted(value: new { status = "not_implemented" }));
+
     // ── SPA fallback ──────────────────────────────────────────────────────────
     // Angular handles client-side routing; deep links must serve index.html.
     // Production only — paired with the static-files block above.

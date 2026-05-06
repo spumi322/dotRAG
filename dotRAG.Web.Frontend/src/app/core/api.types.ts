@@ -61,3 +61,43 @@ export interface RecentTraceSummary {
   totalMs: number;
   running: boolean;
 }
+
+// Notes browser DTOs — mirror dotRAG.API/Models/NotesDtos.cs.
+
+export interface NotesFileSummary {
+  relativePath: string;
+  fileName: string;
+  chunkCount: number;
+  headings: string[];
+}
+
+export interface NotesModule {
+  name: string;
+  files: NotesFileSummary[];
+}
+
+export interface NotesIndex {
+  totalFiles: number;
+  totalChunks: number;
+  modules: NotesModule[];
+}
+
+export interface NoteChunkDto {
+  index: number;
+  heading: string;
+  content: string;
+}
+
+export interface EmbeddingMetadata {
+  model: string;
+  dimension: number;
+  cachePath: string;
+}
+
+export interface NotesFileDetail {
+  relativePath: string;
+  fileName: string;
+  module: string;
+  chunks: NoteChunkDto[];
+  embedding: EmbeddingMetadata;
+}

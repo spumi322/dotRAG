@@ -1,0 +1,114 @@
+<div class="notes">
+  <aside class="notes-index">
+    <header class="head">
+      <h1>Notes index</h1>
+      @if (notes.index(); as idx) {
+        <div class="head-sub mono">{{ idx.totalFiles }} files · {{ idx.totalChunks }} chunks</div>
+      }
+    </header>
+
+    <input
+      class="search"
+      type="text"
+      placeholder="Search files / headings..."
+      [value]="searchTerm()"
+      (input)="onSearchInput($any($event.target).value)" />
+
+    @if (notes.loading()) {
+      <div class="placeholder">Loading index…</div>
+    } @else if (!notes.index()) {
+      <div class="placeholder">No index loaded.</div>
+    } @else if (filteredModules().length === 0) {
+      <div class="placeholder">No matches.</div>
+    } @else {
+      <div class="modules">
+        @for (mod of filteredModules(); track trackByModule($index, mod)) {
+          <div class="module">
+            @if (mod.name) {
+              <button
+                type="button"
+                class="module-row"
+                [class.module-row--expanded]="isModuleExpanded(mod.name)"
+                (click)="toggleModule(mod.name)">
+                <span class="caret">{{ isModuleExpanded(mod.name) ? '▾' : '▸' }}</span>
+                <span class="module-name">{{ mod.name }}</span>
+                <span class="module-count mono">{{ mod.files.length }}</span>
+              </button>
+            }
+            @if (!mod.name || isModuleExpanded(mod.name)) {
+              <div class="files" [class.files--ungrouped]="!mod.name">
+                @for (f of mod.files; track trackByFile($index, f)) {
+                  <button
+                    type="button"
+                    class="file-row"
+                    [class.file-row--selected]="isFileSelected(f.relativePath)"
+                    (click)="selectFile(f)">
+                    <span class="file-name">{{ f.fileName }}</span>
+                    <span class="file-chunks mono">{{ f.chunkCount }}</span>
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+  </aside>
+
+  <section class="notes-detail">
+    @if (notes.selectedFile(); as file) {
+      <header class="detail-head">
+        <div class="detail-meta">
+          @if (file.module) {
+            <div class="breadcrumb">{{ file.module }}</div>
+          }
+          <h2 class="detail-title">{{ file.fileName }}</h2>
+          <div class="detail-sub mono">
+            {{ file.chunks.length }} chunks · {{ file.relativePath }}
+          </div>
+        </div>
+        <button type="button" class="reindex" (click)="reindex()">Re-index</button>
+      </header>
+
+      <section class="chunks-section">
+        <h3 class="section-title">Chunks (breadcrumb headings)</h3>
+        @if (file.chunks.length === 0) {
+          <div class="placeholder">No chunks for this file.</div>
+        } @else {
+          <ul class="chunks-list">
+            @for (c of file.chunks; track c.index) {
+              <li
+                class="chunk-row"
+                [class.chunk-row--selected]="notes.selectedChunkIndex() === c.index">
+                <span class="chunk-heading">{{ c.heading }}</span>
+                <button type="button" class="view-btn" (click)="selectChunk(c.index)">view</button>
+              </li>
+            }
+          </ul>
+        }
+      </section>
+
+      <section class="preview-section">
+        <h3 class="section-title">Chunk preview</h3>
+        @if (selectedChunk(); as chunk) {
+          <pre class="chunk-preview mono">{{ chunk.content }}</pre>
+        } @else {
+          <div class="placeholder">Select a chunk to preview its content.</div>
+        }
+      </section>
+
+      <section class="embedding-section">
+        <h3 class="section-title">Cached embedding</h3>
+        <div class="embedding-line mono">
+          [float[{{ file.embedding.dimension }}] — {{ file.embedding.model }} — from {{ file.embedding.cachePath }}]
+        </div>
+      </section>
+    } @else if (notes.loadingFile()) {
+      <div class="placeholder">Loading file…</div>
+    } @else {
+      <div class="placeholder placeholder--center">
+        Select a file from the index to inspect its chunks and embedding metadata.
+      </div>
+    }
+  </section>
+</div>

@@ -14,6 +14,11 @@ internal sealed class InMemoryVectorStore
         ? 0
         : _store.Select(e => e.Chunk.SourceFile).Distinct().Count();
 
+    public int EmbeddingDimension => _store.Count == 0 ? 0 : _store[0].Embedding.Length;
+
+    public IReadOnlyList<NoteChunk> AllChunks() =>
+        _store.Count == 0 ? [] : _store.Select(e => e.Chunk).ToList();
+
     public IReadOnlyList<(NoteChunk Chunk, float Score)> Search(float[] query, int topK, float minScore = 0f) =>
         _store.Count == 0 ? [] :
         _store
