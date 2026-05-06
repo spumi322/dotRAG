@@ -1,0 +1,72 @@
+<div class="chat">
+  <header class="head">
+    <h1>Chat</h1>
+    @if (chat.messages().length > 0) {
+      <button type="button" class="clear" (click)="chat.clear()" [disabled]="chat.sending()">Clear</button>
+    }
+  </header>
+
+  <div class="thread" #thread>
+    @for (m of chat.messages(); track m.id) {
+      <div class="msg" [class]="'msg--' + m.role">
+        @if (m.role === 'assistant') {
+          <span class="badge">AI</span>
+          <div class="bubble bubble--md" [innerHTML]="m.content | markdown"></div>
+        } @else {
+          <div class="bubble">{{ m.content }}</div>
+        }
+      </div>
+    }
+    @if (chat.sending()) {
+      <div class="msg msg--assistant">
+        <span class="badge">AI</span>
+        <div class="bubble bubble--pending">…</div>
+      </div>
+    }
+  </div>
+
+  <div class="composer">
+    <textarea
+      class="input"
+      rows="1"
+      placeholder="Ask a .NET question..."
+      [value]="input()"
+      [disabled]="chat.sending()"
+      (input)="onInput($any($event.target).value)"
+      (keydown)="onKeydown($event)"></textarea>
+    <button type="button" class="send" [disabled]="!canSend()" (click)="send()">Send</button>
+  </div>
+
+  <label class="history-toggle">
+    <input
+      type="checkbox"
+      [checked]="chat.includeHistory()"
+      (change)="chat.includeHistory.set($any($event.target).checked)" />
+    Include history
+    @if (chat.history().length > 0) {
+      <span class="history-count">({{ chat.history().length / 2 }} turns)</span>
+    }
+  </label>
+</div>
+
+<ng-template #chunksPanel>
+  <div class="panel-section">
+    <h2 class="panel-title">Retrieved chunks</h2>
+    <div class="panel-sub">for last answer</div>
+    @if (chat.sending() && chat.lastChunks().length === 0) {
+      <div class="placeholder">awaiting response…</div>
+    } @else if (chat.lastChunks().length === 0) {
+      <div class="placeholder">No chunks yet — send a question.</div>
+    } @else {
+      @for (c of chat.lastChunks(); track c.sourceFile + '|' + c.heading) {
+        <div class="chunk">
+          <div class="chunk-heading">{{ c.heading }}</div>
+          <div class="chunk-source mono">{{ c.sourceFile }}</div>
+          @if (c.score !== null) {
+            <span class="chunk-score">{{ c.score.toFixed(2) }}</span>
+          }
+        </div>
+      }
+    }
+  </div>
+</ng-template>
