@@ -13,5 +13,6 @@ public interface IPromptBuilder
 public sealed record PromptBuildResult(
     string Prompt,
     int EstimatedTokens,
+    int MaxTokens,
     int HistoryIncluded,
     int HistoryTrimmed);

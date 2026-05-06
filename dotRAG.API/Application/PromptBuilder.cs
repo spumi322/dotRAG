@@ -44,7 +44,7 @@ internal sealed class PromptBuilder : IPromptBuilder
                 _logger.LogInformation(
                     "Prompt assembled: ~{Tokens} tokens, {Included} history messages included, {Trimmed} trimmed",
                     tokenEstimate, includedCount, trimmedCount);
-                return new PromptBuildResult(candidate, tokenEstimate, includedCount, trimmedCount);
+                return new PromptBuildResult(candidate, tokenEstimate, _maxTokens, includedCount, trimmedCount);
             }
 
             if (window is { Count: >= 2 })
@@ -57,7 +57,7 @@ internal sealed class PromptBuilder : IPromptBuilder
             _logger.LogWarning(
                 "Prompt exceeds token budget ({Est} tokens > {Max} max) with no history to trim. Sending anyway.",
                 tokenEstimate, _maxTokens);
-            return new PromptBuildResult(candidate, tokenEstimate, window?.Count ?? 0, originalHistoryCount - (window?.Count ?? 0));
+            return new PromptBuildResult(candidate, tokenEstimate, _maxTokens, window?.Count ?? 0, originalHistoryCount - (window?.Count ?? 0));
         }
     }
 

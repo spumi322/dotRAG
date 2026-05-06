@@ -27,7 +27,13 @@ internal sealed class ChatService : IChatService
 
     public async Task<ChatResult> AskAsync(ChatRequest request, CancellationToken ct = default)
     {
-        var totalSw = Stopwatch.StartNew();
+        var totalSw       = Stopwatch.StartNew();
+        var correlationId = ResolveCorrelationId();
+        var startedAt     = DateTimeOffset.UtcNow;
+
+        if (correlationId is not null)
+            _traces.StartTrace(correlationId, startedAt, request.Question);
+
         var searchQuery = request.Question;
         StageTiming? rewriteStage = null;
         string? rewrittenQuery = null;
@@ -42,8 +48,10 @@ internal sealed class ChatService : IChatService
             rewriteStage = new StageTiming(rewriteSw.ElapsedMilliseconds, new Dictionary<string, object?>
             {
                 ["historyMessages"] = request.History.Count,
+                ["rewrittenQuery"]  = rewrittenQuery,
             });
             _logger.LogInformation("[QueryRewrite] Result: {Query}", searchQuery);
+            RecordStage(correlationId, "queryRewrite", rewriteStage);
         }
 
         _logger.LogInformation("[Retrieval] Searching for: {Query}", searchQuery);
@@ -54,10 +62,13 @@ internal sealed class ChatService : IChatService
         {
             ["dim"] = searchResult.EmbeddingDim,
         });
+        RecordStage(correlationId, "embedding", embeddingStage);
+
         var vectorSearchStage = new StageTiming(searchResult.SearchMs, new Dictionary<string, object?>
         {
             ["chunks"] = searchResult.Chunks.Count,
         });
+        RecordStage(correlationId, "vectorSearch", vectorSearchStage);
 
         var promptSw = Stopwatch.StartNew();
         var promptResult = _prompt.Build(request.Question, noteChunks, request.History);
@@ -67,9 +78,11 @@ internal sealed class ChatService : IChatService
         var promptStage = new StageTiming(promptSw.ElapsedMilliseconds, new Dictionary<string, object?>
         {
             ["estimatedTokens"]  = promptResult.EstimatedTokens,
+            ["maxTokens"]        = promptResult.MaxTokens,
             ["historyIncluded"]  = promptResult.HistoryIncluded,
             ["historyTrimmed"]   = promptResult.HistoryTrimmed,
         });
+        RecordStage(correlationId, "promptBuild", promptStage);
 
         _logger.LogInformation("[LlmCall] Sending prompt to LLM");
         var llmSw = Stopwatch.StartNew();
@@ -81,29 +94,36 @@ internal sealed class ChatService : IChatService
         {
             ["responseChars"] = response.Length,
         });
+        RecordStage(correlationId, "llmComplete", llmStage);
 
         totalSw.Stop();
 
         var chunkDtos = searchResult.Chunks.Select(ChunkDto.FromScored).ToList();
 
-        var correlationId = ResolveCorrelationId();
         if (correlationId is not null)
         {
-            _traces.Add(new PipelineTrace(
-                CorrelationId:    correlationId,
-                Timestamp:        DateTimeOffset.UtcNow,
-                Question:         request.Question,
-                RewrittenQuery:   rewrittenQuery,
-                QueryRewrite:     rewriteStage,
-                Embedding:        embeddingStage,
-                VectorSearch:     vectorSearchStage,
-                PromptBuild:      promptStage,
-                LlmComplete:      llmStage,
-                TotalMs:          totalSw.ElapsedMilliseconds,
-                RetrievedChunks:  chunkDtos));
+            _traces.Complete(new PipelineTrace(
+                CorrelationId:   correlationId,
+                Timestamp:       startedAt,
+                Question:        request.Question,
+                RewrittenQuery:  rewrittenQuery,
+                QueryRewrite:    rewriteStage,
+                Embedding:       embeddingStage,
+                VectorSearch:    vectorSearchStage,
+                PromptBuild:     promptStage,
+                LlmComplete:     llmStage,
+                TotalMs:         totalSw.ElapsedMilliseconds,
+                Running:         false,
+                RetrievedChunks: chunkDtos));
         }
 
         return new ChatResult(response, chunkDtos);
+    }
+
+    private void RecordStage(string? correlationId, string stage, StageTiming timing)
+    {
+        if (correlationId is null) return;
+        _traces.RecordStage(correlationId, stage, timing.Ms, timing.Meta);
     }
 
     private string? ResolveCorrelationId() =>

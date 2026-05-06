@@ -19,7 +19,7 @@ public sealed class ChatServiceTests
         new(Chunks: [], EmbedMs: 0, SearchMs: 0, EmbeddingDim: 1024);
 
     private static readonly PromptBuildResult DummyPrompt =
-        new(Prompt: "prompt", EstimatedTokens: 10, HistoryIncluded: 0, HistoryTrimmed: 0);
+        new(Prompt: "prompt", EstimatedTokens: 10, MaxTokens: 8192, HistoryIncluded: 0, HistoryTrimmed: 0);
 
     private static PipelineTraceStore Store() =>
         new(new ConfigurationBuilder().Build());

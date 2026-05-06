@@ -78,9 +78,30 @@ try
     app.UseExceptionHandler();
     app.UseCors();
     app.UseMiddleware<CorrelationIdMiddleware>();
-    app.UseSerilogRequestLogging();
-    app.UseDefaultFiles();  // maps / → /index.html
-    app.UseStaticFiles();
+    app.UseSerilogRequestLogging(opts =>
+    {
+        // Debug endpoints are polled every few hundred ms by the Debug screen —
+        // logging each request at Info level drowns the console. Drop them to
+        // Verbose so they're filtered out by the default minimum level.
+        opts.GetLevel = (ctx, _, ex) =>
+        {
+            if (ex is not null || ctx.Response.StatusCode >= 500)
+                return Serilog.Events.LogEventLevel.Error;
+            if (ctx.Request.Path.StartsWithSegments("/api/debug") ||
+                ctx.Request.Path.StartsWithSegments("/health"))
+                return Serilog.Events.LogEventLevel.Verbose;
+            return Serilog.Events.LogEventLevel.Information;
+        };
+    });
+    // SPA static files — production only. In Development the Angular dev
+    // server (npm start, :4200) serves the UI and proxies /api here. Serving
+    // wwwroot in dev would hand the browser a stale bundle that doesn't
+    // reflect ongoing src/ changes.
+    if (!app.Environment.IsDevelopment())
+    {
+        app.UseDefaultFiles();  // maps / → /index.html
+        app.UseStaticFiles();
+    }
 
     if (app.Environment.IsDevelopment())
     {
@@ -126,21 +147,19 @@ try
     });
 
     // ── Debug endpoints (in-memory pipeline traces) ───────────────────────────
-    app.MapGet("/api/debug/recent", (PipelineTraceStore store) =>
-        store.Recent().Select(t => new
-        {
-            correlationId = t.CorrelationId,
-            timestamp     = t.Timestamp,
-            question      = t.Question,
-            totalMs       = t.TotalMs,
-        }));
+    // Frontend polls /recent every ~300ms while the Debug screen is open, and
+    // /query/{id} for the currently-selected trace. In-flight traces show up
+    // in /recent with running=true; their /query/{id} returns a partial trace.
+    app.MapGet("/api/debug/recent", (PipelineTraceStore store) => store.Recent());
 
     app.MapGet("/api/debug/query/{id}", (string id, PipelineTraceStore store) =>
         store.Get(id) is { } trace ? Results.Ok(trace) : Results.NotFound());
 
     // ── SPA fallback ──────────────────────────────────────────────────────────
     // Angular handles client-side routing; deep links must serve index.html.
-    app.MapFallbackToFile("index.html");
+    // Production only — paired with the static-files block above.
+    if (!app.Environment.IsDevelopment())
+        app.MapFallbackToFile("index.html");
 
     app.Run();
 }

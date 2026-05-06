@@ -27,6 +27,14 @@ public sealed class PromptBuilderTests
         Assert.DoesNotContain("Conversation History", result.Prompt);
         Assert.Equal(0, result.HistoryIncluded);
         Assert.Equal(0, result.HistoryTrimmed);
+        Assert.Equal(8192, result.MaxTokens);
+    }
+
+    [Fact]
+    public void MaxTokens_ReflectsConfiguredBudget()
+    {
+        var result = Make(maxTokens: 4096).Build("Q?", OneChunk);
+        Assert.Equal(4096, result.MaxTokens);
     }
 
     [Fact]
