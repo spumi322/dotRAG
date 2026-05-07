@@ -9,8 +9,6 @@ public sealed record PipelineTrace(
     string CorrelationId,
     DateTimeOffset Timestamp,
     string Question,
-    string? RewrittenQuery,
-    StageTiming? QueryRewrite,
     StageTiming? Embedding,
     StageTiming? VectorSearch,
     StageTiming? PromptBuild,

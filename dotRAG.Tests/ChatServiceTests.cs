@@ -12,7 +12,6 @@ public sealed class ChatServiceTests
     private readonly Mock<INotesSearchService>  _search   = new();
     private readonly Mock<IPromptBuilder>       _prompt   = new();
     private readonly Mock<ILlmService>          _llm      = new();
-    private readonly Mock<IQueryRewriter>       _rewriter = new();
     private readonly Mock<IHttpContextAccessor> _http     = new();
 
     private static readonly NotesSearchResult EmptySearch =
@@ -25,47 +24,32 @@ public sealed class ChatServiceTests
         new(new ConfigurationBuilder().Build());
 
     private ChatService Sut() => new(
-        _search.Object, _prompt.Object, _llm.Object, _rewriter.Object,
+        _search.Object, _prompt.Object, _llm.Object,
         Store(), _http.Object, NullLogger<ChatService>.Instance);
 
     [Fact]
-    public async Task NoHistory_RewriterNotCalled()
+    public async Task AskAsync_returns_llm_response()
     {
-        _search .Setup(s => s.SearchAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(EmptySearch);
-        _prompt .Setup(p => p.Build(It.IsAny<string>(), It.IsAny<IReadOnlyList<NoteChunk>>(), It.IsAny<IReadOnlyList<HistoryMessage>?>())).Returns(DummyPrompt);
-        _llm    .Setup(l => l.CompleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync("answer");
+        _search.Setup(s => s.SearchAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(EmptySearch);
+        _prompt.Setup(p => p.Build(It.IsAny<string>(), It.IsAny<IReadOnlyList<NoteChunk>>(), It.IsAny<IReadOnlyList<HistoryMessage>?>())).Returns(DummyPrompt);
+        _llm   .Setup(l => l.CompleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync("answer");
 
-        await Sut().AskAsync(new ChatRequest("Q?"));
+        var result = await Sut().AskAsync(new ChatRequest("Q?"));
 
-        _rewriter.Verify(r => r.RewriteAsync(It.IsAny<IReadOnlyList<HistoryMessage>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        Assert.Equal("answer", result.Answer);
     }
 
     [Fact]
-    public async Task WithHistory_RewriterCalled_SearchUsesRewrittenQuery()
+    public async Task WithHistory_SearchAndPromptUseOriginalQuestion()
     {
         var history = new List<HistoryMessage> { new("user", "Q1"), new("assistant", "A1") };
-        _rewriter.Setup(r => r.RewriteAsync(history, "Q2", It.IsAny<CancellationToken>())).ReturnsAsync("Rewritten Q2");
-        _search  .Setup(s => s.SearchAsync("Rewritten Q2", It.IsAny<CancellationToken>())).ReturnsAsync(EmptySearch);
-        _prompt  .Setup(p => p.Build(It.IsAny<string>(), It.IsAny<IReadOnlyList<NoteChunk>>(), It.IsAny<IReadOnlyList<HistoryMessage>?>())).Returns(DummyPrompt);
-        _llm     .Setup(l => l.CompleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync("answer");
-
-        await Sut().AskAsync(new ChatRequest("Q2", history));
-
-        _rewriter.Verify(r => r.RewriteAsync(history, "Q2", It.IsAny<CancellationToken>()), Times.Once);
-        _search  .Verify(s => s.SearchAsync("Rewritten Q2", It.IsAny<CancellationToken>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task WithHistory_OriginalQuestionForwardedToPromptBuilder()
-    {
-        var history = new List<HistoryMessage> { new("user", "Q1"), new("assistant", "A1") };
-        _rewriter.Setup(r => r.RewriteAsync(It.IsAny<IReadOnlyList<HistoryMessage>>(), It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync("Rewritten");
-        _search  .Setup(s => s.SearchAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(EmptySearch);
-        _prompt  .Setup(p => p.Build(It.IsAny<string>(), It.IsAny<IReadOnlyList<NoteChunk>>(), It.IsAny<IReadOnlyList<HistoryMessage>?>())).Returns(DummyPrompt);
-        _llm     .Setup(l => l.CompleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync("answer");
+        _search.Setup(s => s.SearchAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(EmptySearch);
+        _prompt.Setup(p => p.Build(It.IsAny<string>(), It.IsAny<IReadOnlyList<NoteChunk>>(), It.IsAny<IReadOnlyList<HistoryMessage>?>())).Returns(DummyPrompt);
+        _llm   .Setup(l => l.CompleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync("answer");
 
         await Sut().AskAsync(new ChatRequest("Original Q", history));
 
-        _prompt.Verify(p => p.Build("Original Q", It.IsAny<IReadOnlyList<NoteChunk>>(), It.IsAny<IReadOnlyList<HistoryMessage>?>()), Times.Once);
+        _search.Verify(s => s.SearchAsync("Original Q", It.IsAny<CancellationToken>()), Times.Once);
+        _prompt.Verify(p => p.Build("Original Q", It.IsAny<IReadOnlyList<NoteChunk>>(), history), Times.Once);
     }
 }

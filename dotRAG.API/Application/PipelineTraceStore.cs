@@ -85,22 +85,15 @@ internal sealed class PipelineTraceStore
 
         public PipelineTrace Snapshot()
         {
-            Stages.TryGetValue("queryRewrite", out var qr);
             Stages.TryGetValue("embedding",    out var em);
             Stages.TryGetValue("vectorSearch", out var vs);
             Stages.TryGetValue("promptBuild",  out var pb);
             Stages.TryGetValue("llmComplete",  out var lc);
 
-            string? rewritten = null;
-            if (qr is not null && qr.Meta.TryGetValue("rewrittenQuery", out var v) && v is string s)
-                rewritten = s;
-
             return new PipelineTrace(
                 CorrelationId:   CorrelationId,
                 Timestamp:       Timestamp,
                 Question:        Question,
-                RewrittenQuery:  rewritten,
-                QueryRewrite:    qr,
                 Embedding:       em,
                 VectorSearch:    vs,
                 PromptBuild:     pb,

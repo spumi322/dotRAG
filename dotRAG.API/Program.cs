@@ -67,7 +67,6 @@ try
     builder.Services.AddHostedService(sp => sp.GetRequiredService<NotesIngestionService>());
 
     // ── Application ───────────────────────────────────────────────────────────
-    builder.Services.AddSingleton<IQueryRewriter, QueryRewriter>();
     builder.Services.AddSingleton<IPromptBuilder, PromptBuilder>();
     builder.Services.AddSingleton<PipelineTraceStore>();
     builder.Services.AddSingleton<IChatService, ChatService>();

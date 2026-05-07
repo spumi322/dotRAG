@@ -31,7 +31,6 @@ export interface StageTiming {
 }
 
 export type StageKind =
-  | 'queryRewrite'
   | 'embedding'
   | 'vectorSearch'
   | 'promptBuild'
@@ -43,8 +42,6 @@ export interface PipelineTrace {
   correlationId: string;
   timestamp: string;
   question: string;
-  rewrittenQuery: string | null;
-  queryRewrite: StageTiming | null;
   embedding: StageTiming | null;
   vectorSearch: StageTiming | null;
   promptBuild: StageTiming | null;
