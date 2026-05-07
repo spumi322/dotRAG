@@ -1,0 +1,77 @@
+<div class="settings">
+  <header class="head">
+    <h1>Settings</h1>
+    <div class="head-actions">
+      <button type="button" class="btn btn--ghost" (click)="reset()" [disabled]="saving() || loading()">Reset to defaults</button>
+      <button type="button" class="btn btn--primary" (click)="save()" [disabled]="!dirty() || saving() || loading()">
+        {{ saving() ? 'Saving…' : 'Save changes' }}
+      </button>
+    </div>
+  </header>
+
+  @if (reingestPending()) {
+    <div class="banner">Re-ingesting notes — chat will resume when ready.</div>
+  }
+
+  @if (loading()) {
+    <div class="loading">Loading…</div>
+  } @else {
+    <div class="cols">
+      <div class="col">
+        @for (sect of sectionsFor(leftFields); track sect.id) {
+          <section class="sect">
+            <div class="sect-head">
+              <div class="sect-title">{{ sectionTitle(sect.id) }}</div>
+              <div class="sect-sub">{{ sectionSub(sect.id) }}</div>
+              <hr />
+            </div>
+            @for (f of sect.fields; track f.key) {
+              <div class="field" [class.field--reingest]="f.reingest">
+                <div class="field-head">
+                  <label class="field-label" [attr.for]="'f-' + f.key">{{ f.label }}</label>
+                  @if (f.note) { <span class="field-note">{{ f.note }}</span> }
+                  @if (f.reingest) { <span class="tag tag--reingest" title="Changing this triggers re-ingest">re-ingest</span> }
+                </div>
+                <input
+                  [id]="'f-' + f.key"
+                  class="input"
+                  [class.input--mono]="f.mono"
+                  [type]="f.type === 'password' ? 'text' : f.type"
+                  [value]="fieldValue(f.key)"
+                  (input)="setValue(f.key, $any($event.target).value)" />
+              </div>
+            }
+          </section>
+        }
+      </div>
+
+      <div class="col">
+        @for (sect of sectionsFor(rightFields); track sect.id) {
+          <section class="sect">
+            <div class="sect-head">
+              <div class="sect-title">{{ sectionTitle(sect.id) }}</div>
+              <div class="sect-sub">{{ sectionSub(sect.id) }}</div>
+              <hr />
+            </div>
+            @for (f of sect.fields; track f.key) {
+              <div class="field" [class.field--reingest]="f.reingest">
+                <div class="field-head">
+                  <label class="field-label" [attr.for]="'f-' + f.key">{{ f.label }}</label>
+                  @if (f.note) { <span class="field-note">{{ f.note }}</span> }
+                  @if (f.reingest) { <span class="tag tag--reingest" title="Changing this triggers re-ingest">re-ingest</span> }
+                </div>
+                <input
+                  [id]="'f-' + f.key"
+                  class="input"
+                  [class.input--mono]="f.mono"
+                  [type]="f.type === 'password' ? 'text' : f.type"
+                  [value]="fieldValue(f.key)"
+                  (input)="setValue(f.key, $any($event.target).value)" />
+              </div>
+            }
+          </section>
+        }
+      </div>
+    </div>
+  }
+</div>

@@ -8,31 +8,35 @@ internal sealed class MarkdownChunker
 {
     private static readonly Regex WikiLink = new(@"\[\[([^\]]+)\]\]", RegexOptions.Compiled);
 
-    private readonly int _maxChunkChars;
+    private readonly IConfiguration? _config;
 
     public MarkdownChunker(IConfiguration? config = null)
     {
-        _maxChunkChars = config?.GetValue<int>("Chunking:MaxChunkChars", 2000) ?? 2000;
+        _config = config;
     }
 
     public IReadOnlyList<NoteChunk> Chunk(string filePath, string content)
     {
+        var maxChunkChars  = _config?.GetValue("Chunking:MaxChunkChars",  2000) ?? 2000;
+        var headingDepth   = Math.Clamp(_config?.GetValue("Chunking:HeadingDepth", 3) ?? 3, 1, 6);
+        var minChunkLength = Math.Max(_config?.GetValue("Chunking:MinChunkLength", 20) ?? 20, 1);
+
         var fileName = Path.GetFileNameWithoutExtension(filePath);
         var results  = new List<NoteChunk>();
-        var headingStack = new string?[3]; // levels 1, 2, 3
+        var headingStack = new string?[headingDepth];
         var currentHeading = fileName;
         var body = new StringBuilder();
 
         foreach (var line in content.Split('\n'))
         {
-            var level = CountLeadingHashes(line);
-            if (level >= 1 && level <= 3)
+            var level = CountLeadingHashes(line, headingDepth);
+            if (level >= 1 && level <= headingDepth)
             {
-                FlushWithSplit(fileName, currentHeading, body, results);
+                FlushWithSplit(fileName, currentHeading, body, results, maxChunkChars, minChunkLength);
                 var text = line.AsSpan().TrimStart('#').Trim().ToString();
 
                 headingStack[level - 1] = text;
-                for (var i = level; i < 3; i++)
+                for (var i = level; i < headingDepth; i++)
                     headingStack[i] = null;
 
                 currentHeading = BuildBreadcrumb(headingStack, text);
@@ -44,14 +48,14 @@ internal sealed class MarkdownChunker
             }
         }
 
-        FlushWithSplit(fileName, currentHeading, body, results);
+        FlushWithSplit(fileName, currentHeading, body, results, maxChunkChars, minChunkLength);
         return results;
     }
 
     // H1 is the file title (matches SourceFile), so breadcrumb starts from H2.
     private static string BuildBreadcrumb(string?[] stack, string fallback)
     {
-        var parts = new List<string>(2);
+        var parts = new List<string>(stack.Length);
         for (var i = 1; i < stack.Length; i++)
         {
             if (stack[i] is { } part)
@@ -61,7 +65,7 @@ internal sealed class MarkdownChunker
         return parts.Count > 0 ? string.Join(" > ", parts) : fallback;
     }
 
-    private static int CountLeadingHashes(string line)
+    private static int CountLeadingHashes(string line, int maxDepth)
     {
         var count = 0;
         foreach (var ch in line)
@@ -70,18 +74,18 @@ internal sealed class MarkdownChunker
             else break;
         }
 
-        if (count == 0 || count > 3) return 0;
+        if (count == 0 || count > maxDepth) return 0;
         if (count >= line.Length || line[count] != ' ') return 0;
         return count;
     }
 
-    private void FlushWithSplit(string source, string heading, StringBuilder body, List<NoteChunk> results)
+    private static void FlushWithSplit(string source, string heading, StringBuilder body, List<NoteChunk> results, int maxChunkChars, int minChunkLength)
     {
         var cleaned = WikiLink.Replace(body.ToString(), "$1").Replace("\r\n", "\n").Trim();
-        if (cleaned.Length < 20)
+        if (cleaned.Length < minChunkLength)
             return;
 
-        if (cleaned.Length <= _maxChunkChars)
+        if (cleaned.Length <= maxChunkChars)
         {
             results.Add(new NoteChunk(source, heading, cleaned));
             return;
@@ -92,9 +96,9 @@ internal sealed class MarkdownChunker
 
         foreach (var para in paragraphs)
         {
-            if (group.Length + para.Length + 2 > _maxChunkChars && group.Length > 0)
+            if (group.Length + para.Length + 2 > maxChunkChars && group.Length > 0)
             {
-                EmitChunk(source, heading, group, results);
+                EmitChunk(source, heading, group, results, minChunkLength);
                 group.Clear();
             }
 
@@ -103,13 +107,13 @@ internal sealed class MarkdownChunker
             group.Append(para);
         }
 
-        EmitChunk(source, heading, group, results);
+        EmitChunk(source, heading, group, results, minChunkLength);
     }
 
-    private static void EmitChunk(string source, string heading, StringBuilder group, List<NoteChunk> results)
+    private static void EmitChunk(string source, string heading, StringBuilder group, List<NoteChunk> results, int minChunkLength)
     {
         var text = group.ToString().Trim();
-        if (text.Length >= 20)
+        if (text.Length >= minChunkLength)
             results.Add(new NoteChunk(source, heading, text));
     }
 }

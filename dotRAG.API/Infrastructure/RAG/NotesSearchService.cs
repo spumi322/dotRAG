@@ -8,27 +8,28 @@ internal sealed class NotesSearchService : INotesSearchService
 {
     private readonly IEmbeddingService   _embedder;
     private readonly InMemoryVectorStore _store;
-    private readonly int   _topK;
-    private readonly float _minScore;
+    private readonly IConfiguration _config;
     private readonly ILogger<NotesSearchService> _logger;
 
     public NotesSearchService(IEmbeddingService embedder, InMemoryVectorStore store, IConfiguration config, ILogger<NotesSearchService> logger)
     {
         _embedder = embedder;
         _store    = store;
-        _topK     = config.GetValue<int>  ("Retrieval:TopK",     3);
-        _minScore = config.GetValue<float>("Retrieval:MinScore", 0.5f);
+        _config   = config;
         _logger   = logger;
     }
 
     public async Task<NotesSearchResult> SearchAsync(string question, CancellationToken ct = default)
     {
+        var topK     = _config.GetValue("Retrieval:TopK",     3);
+        var minScore = _config.GetValue("Retrieval:MinScore", 0.5f);
+
         var embedSw = Stopwatch.StartNew();
         var embedding = await _embedder.EmbedAsync(question, "query", ct);
         embedSw.Stop();
 
         var searchSw = Stopwatch.StartNew();
-        var scored = _store.Search(embedding, _topK, _minScore);
+        var scored = _store.Search(embedding, topK, minScore);
         searchSw.Stop();
 
         if (scored.Count == 0)
@@ -37,7 +38,7 @@ internal sealed class NotesSearchService : INotesSearchService
             var bestScore = best.Count > 0 ? best[0].Score : 0f;
             _logger.LogWarning(
                 "[Retrieval] No chunks above MinScore {MinScore} (best was {BestScore:F3}, searched {Total} chunks)",
-                _minScore, bestScore, _store.Count);
+                minScore, bestScore, _store.Count);
         }
         else
         {

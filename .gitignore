@@ -433,6 +433,9 @@ FodyWeavers.xsd
 ### Embedding cache ###
 cache/
 
+### User settings overrides (written by /api/settings) ###
+user-settings.json
+
 ### Misc ###
 .todo
 

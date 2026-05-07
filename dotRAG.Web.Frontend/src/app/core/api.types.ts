@@ -61,3 +61,27 @@ export interface RecentTraceSummary {
   totalMs: number;
   running: boolean;
 }
+
+// Mirrors dotRAG.API/Models/SettingsDto.cs. API key fields come back masked
+// (e.g. "voy-••••••••abcd") on GET; on PUT, sending the masked value back
+// or null leaves the secret untouched.
+export interface SettingsDto {
+  notesPath:       string;
+  fileGlob:        string;
+  maxChunkChars:   number;
+  headingDepth:    number;
+  minChunkLength:  number;
+  embeddingModel:  string;
+
+  provider:         string;
+  llmModel:         string | null;
+  openRouterApiKey: string | null;
+  voyageApiKey:     string | null;
+  topK:             number;
+  minScore:         number;
+  maxPromptTokens:  number;
+}
+
+export interface SaveSettingsResult {
+  reingestTriggered: boolean;
+}

@@ -7,20 +7,19 @@ namespace dotRAG.API.Infrastructure.Embeddings;
 
 internal sealed class VoyageEmbeddingService : IEmbeddingService
 {
-    private const string Endpoint  = "https://api.voyageai.com/v1/embeddings";
-    private const string ModelName = "voyage-3-large";
+    private const string Endpoint        = "https://api.voyageai.com/v1/embeddings";
+    private const string DefaultModel    = "voyage-3-large";
 
-    public string Model => ModelName;
+    public string Model => _config["Embedding:Model"] ?? DefaultModel;
 
     private readonly IHttpClientFactory _http;
-    private readonly string _apiKey;
+    private readonly IConfiguration _config;
     private readonly ILogger<VoyageEmbeddingService> _logger;
 
     public VoyageEmbeddingService(IHttpClientFactory http, IConfiguration config, ILogger<VoyageEmbeddingService> logger)
     {
         _http   = http;
-        _apiKey = config["ApiKeys:VoyageApiKey"]
-            ?? throw new InvalidOperationException("ApiKeys:VoyageApiKey not configured.");
+        _config = config;
         _logger = logger;
     }
 
@@ -32,12 +31,16 @@ internal sealed class VoyageEmbeddingService : IEmbeddingService
 
     public async Task<float[][]> EmbedBatchAsync(IReadOnlyList<string> texts, string? inputType = null, CancellationToken ct = default)
     {
+        var apiKey = _config["ApiKeys:VoyageApiKey"]
+            ?? throw new InvalidOperationException("ApiKeys:VoyageApiKey not configured.");
+        var model  = Model;
+
         using var client = _http.CreateClient();
         client.Timeout = TimeSpan.FromSeconds(30);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
         var sw = Stopwatch.StartNew();
-        var resp = await client.PostAsJsonAsync(Endpoint, new EmbedReq(texts.ToArray(), ModelName, inputType), ct);
+        var resp = await client.PostAsJsonAsync(Endpoint, new EmbedReq(texts.ToArray(), model, inputType), ct);
         if (!resp.IsSuccessStatusCode)
         {
             var errorBody = await resp.Content.ReadAsStringAsync(ct);

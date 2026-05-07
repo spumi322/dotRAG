@@ -8,6 +8,8 @@ internal sealed class InMemoryVectorStore
 
     public void Add(NoteChunk chunk, float[] embedding) => _store.Add((chunk, embedding));
 
+    public void Clear() => _store.Clear();
+
     public int Count => _store.Count;
 
     public int FileCount => _store.Count == 0

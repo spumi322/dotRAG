@@ -9,29 +9,30 @@ internal sealed class OpenRouterLlmService : ILlmService
     private const string Endpoint = "https://openrouter.ai/api/v1/chat/completions";
 
     private readonly IHttpClientFactory _http;
-    private readonly string _apiKey;
-    private readonly string _model;
+    private readonly IConfiguration _config;
     private readonly ILogger<OpenRouterLlmService> _logger;
 
     public OpenRouterLlmService(IHttpClientFactory http, IConfiguration config, ILogger<OpenRouterLlmService> logger)
     {
         _http   = http;
+        _config = config;
         _logger = logger;
-        _apiKey = config["ApiKeys:OpenRouterApiKey"]
-            ?? throw new InvalidOperationException("ApiKeys:OpenRouterApiKey not configured.");
-        _model = config["OpenRouter:Model"]
-            ?? throw new InvalidOperationException("OpenRouter:Model not configured.");
     }
 
     public async Task<string> CompleteAsync(string prompt, CancellationToken ct = default)
     {
+        var apiKey = _config["ApiKeys:OpenRouterApiKey"]
+            ?? throw new InvalidOperationException("ApiKeys:OpenRouterApiKey not configured.");
+        var model  = _config["OpenRouter:Model"]
+            ?? throw new InvalidOperationException("OpenRouter:Model not configured.");
+
         using var client = _http.CreateClient();
         client.Timeout = TimeSpan.FromSeconds(60);
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
-        var request = new OpenRouterRequest([new OpenRouterMessage("user", prompt)], _model);
+        var request = new OpenRouterRequest([new OpenRouterMessage("user", prompt)], model);
 
-        _logger.LogDebug("Sending completion request to OpenRouter (model: {Model})", _model);
+        _logger.LogDebug("Sending completion request to OpenRouter (model: {Model})", model);
 
         var resp = await client.PostAsJsonAsync(Endpoint, request, ct);
 
@@ -50,7 +51,7 @@ internal sealed class OpenRouterLlmService : ILlmService
 
         if (body.Usage is { } usage)
             _logger.LogInformation("OpenRouter response (model: {Model}): {PromptTokens} prompt tokens, {CompletionTokens} completion tokens",
-                _model, usage.PromptTokens, usage.CompletionTokens);
+                model, usage.PromptTokens, usage.CompletionTokens);
 
         return body.Choices[0].Message.Content;
     }

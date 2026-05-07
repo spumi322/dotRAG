@@ -16,13 +16,13 @@ internal sealed class PromptBuilder : IPromptBuilder
         "No relevant notes were found for this question. " +
         "Answer from your own knowledge but keep the response concise and interview-focused.";
 
-    private readonly int _maxTokens;
+    private readonly IConfiguration _config;
     private readonly ILogger<PromptBuilder> _logger;
 
     public PromptBuilder(IConfiguration config, ILogger<PromptBuilder> logger)
     {
-        _maxTokens = config.GetValue<int>("MaxPromptTokens", 8192);
-        _logger    = logger;
+        _config = config;
+        _logger = logger;
     }
 
     public PromptBuildResult Build(
@@ -30,6 +30,7 @@ internal sealed class PromptBuilder : IPromptBuilder
         IReadOnlyList<NoteChunk> chunks,
         IReadOnlyList<HistoryMessage>? history = null)
     {
+        var maxTokens = _config.GetValue("MaxPromptTokens", 8192);
         var window = history is null ? null : new List<HistoryMessage>(history);
         var originalHistoryCount = history?.Count ?? 0;
 
@@ -37,14 +38,14 @@ internal sealed class PromptBuilder : IPromptBuilder
         {
             var candidate = Assemble(question, chunks, window);
             var tokenEstimate = EstimateTokens(candidate);
-            if (tokenEstimate <= _maxTokens)
+            if (tokenEstimate <= maxTokens)
             {
                 var includedCount = window?.Count ?? 0;
                 var trimmedCount = originalHistoryCount - includedCount;
                 _logger.LogInformation(
                     "Prompt assembled: ~{Tokens} tokens, {Included} history messages included, {Trimmed} trimmed",
                     tokenEstimate, includedCount, trimmedCount);
-                return new PromptBuildResult(candidate, tokenEstimate, _maxTokens, includedCount, trimmedCount);
+                return new PromptBuildResult(candidate, tokenEstimate, maxTokens, includedCount, trimmedCount);
             }
 
             if (window is { Count: >= 2 })
@@ -56,8 +57,8 @@ internal sealed class PromptBuilder : IPromptBuilder
 
             _logger.LogWarning(
                 "Prompt exceeds token budget ({Est} tokens > {Max} max) with no history to trim. Sending anyway.",
-                tokenEstimate, _maxTokens);
-            return new PromptBuildResult(candidate, tokenEstimate, _maxTokens, window?.Count ?? 0, originalHistoryCount - (window?.Count ?? 0));
+                tokenEstimate, maxTokens);
+            return new PromptBuildResult(candidate, tokenEstimate, maxTokens, window?.Count ?? 0, originalHistoryCount - (window?.Count ?? 0));
         }
     }
 

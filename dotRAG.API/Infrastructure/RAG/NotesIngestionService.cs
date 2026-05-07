@@ -14,7 +14,11 @@ internal sealed class NotesIngestionService : IHostedService
     private readonly IWebHostEnvironment _env;
     private readonly ILogger<NotesIngestionService> _logger;
 
+    private readonly SemaphoreSlim _gate = new(1, 1);
+
     public bool IsReady { get; private set; }
+    public int ChunkCount => _store.Count;
+    public int FileCount  => _store.FileCount;
 
     public NotesIngestionService(
         IEmbeddingService embedder, InMemoryVectorStore store, MarkdownChunker chunker,
@@ -33,12 +37,26 @@ internal sealed class NotesIngestionService : IHostedService
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
+    /// <summary>
+    /// Public re-ingest trigger. Flips IsReady false until the new index is built.
+    /// Safe to call concurrently — guarded by a semaphore so a second call waits
+    /// rather than running a parallel ingest.
+    /// </summary>
+    public async Task TriggerReingestAsync()
+    {
+        IsReady = false;
+        _store.Clear();
+        await IngestAsync();
+    }
+
     private async Task IngestAsync()
     {
+        await _gate.WaitAsync();
         try
         {
             var notesPath = Path.GetFullPath(
                 Path.Combine(_env.ContentRootPath, _config["NotesPath"] ?? "../Notes"));
+            var fileGlob  = _config["Ingestion:FileGlob"] ?? "*.md";
 
             if (!Directory.Exists(notesPath))
             {
@@ -48,9 +66,9 @@ internal sealed class NotesIngestionService : IHostedService
 
             var sw = Stopwatch.StartNew();
 
-            var files = Directory.GetFiles(notesPath, "*.md", SearchOption.AllDirectories)
+            var files = Directory.GetFiles(notesPath, fileGlob, SearchOption.AllDirectories)
                 .OrderBy(f => f).ToArray();
-            _logger.LogInformation("Ingesting {Count} note files from {Path}", files.Length, notesPath);
+            _logger.LogInformation("Ingesting {Count} note files from {Path} (glob: {Glob})", files.Length, notesPath, fileGlob);
 
             var allChunks = new List<NoteChunk>();
             foreach (var file in files)
@@ -93,6 +111,7 @@ internal sealed class NotesIngestionService : IHostedService
         finally
         {
             IsReady = true;
+            _gate.Release();
         }
     }
 }

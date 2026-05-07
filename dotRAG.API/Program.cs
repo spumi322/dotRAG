@@ -20,6 +20,12 @@ try
 
     var builder = WebApplication.CreateBuilder(args);
 
+    // ── User overrides layer (gitignored, written by PUT /api/settings) ───────
+    // Layered after appsettings.{Env}.json so user edits in the Settings screen
+    // win. reloadOnChange lets runtime values (TopK, MinScore, model, API keys)
+    // take effect on the next request without a restart.
+    builder.Configuration.AddJsonFile("user-settings.json", optional: true, reloadOnChange: true);
+
     // ── Serilog ──────────────────────────────────────────────────────────────
     builder.Host.UseSerilog((ctx, svc, cfg) => cfg
         .MinimumLevel.Information()
@@ -71,6 +77,7 @@ try
     builder.Services.AddSingleton<IPromptBuilder, PromptBuilder>();
     builder.Services.AddSingleton<PipelineTraceStore>();
     builder.Services.AddSingleton<IChatService, ChatService>();
+    builder.Services.AddSingleton<ISettingsService, SettingsService>();
 
     var app = builder.Build();
 
@@ -154,6 +161,21 @@ try
 
     app.MapGet("/api/debug/query/{id}", (string id, PipelineTraceStore store) =>
         store.Get(id) is { } trace ? Results.Ok(trace) : Results.NotFound());
+
+    // ── Settings endpoints ────────────────────────────────────────────────────
+    // GET returns effective merged config (appsettings + user-settings), with
+    // API keys masked. PUT writes overrides to user-settings.json and triggers
+    // re-ingest if any ingestion-dependent key changed. DELETE wipes overrides.
+    app.MapGet("/api/settings", (ISettingsService settings) => settings.GetEffective());
+
+    app.MapPut("/api/settings", async (SettingsDto incoming, ISettingsService settings, CancellationToken ct) =>
+        Results.Ok(await settings.SaveAsync(incoming, ct)));
+
+    app.MapDelete("/api/settings", async (ISettingsService settings, CancellationToken ct) =>
+    {
+        await settings.ResetToDefaultsAsync(ct);
+        return Results.NoContent();
+    });
 
     // ── SPA fallback ──────────────────────────────────────────────────────────
     // Angular handles client-side routing; deep links must serve index.html.
